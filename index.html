@@ -3,2347 +3,877 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全能工具箱 | 实用工具与小游戏集合</title>
+    <title>国策风云 - 网页策略游戏</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind 配置 -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        primary: '#3B82F6',
-                        secondary: '#10B981',
-                        accent: '#8B5CF6',
-                        dark: '#1E293B',
-                        light: '#F8FAFC'
+                        primary: '#1a2456',
+                        secondary: '#8b0000',
+                        dark: '#0f172a',
+                        panel: '#1e293b',
+                        accent: '#f97316',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        info: '#3b82f6',
+                        neutral: '#64748b'
                     },
                     fontFamily: {
-                        inter: ['Inter', 'sans-serif'],
-                    },
+                        hoi: ['"Times New Roman"', 'serif']
+                    }
                 }
             }
         }
     </script>
-    
     <style type="text/tailwindcss">
         @layer utilities {
             .content-auto {
                 content-visibility: auto;
             }
             .text-shadow {
-                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
             }
-            .card-hover {
-                transition: all 0.3s ease;
+            .map-grid {
+                background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                                linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
             }
-            .card-hover:hover {
-                transform: translateY(-5px);
+            .panel-border {
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
             }
-            .gradient-bg {
-                background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+            .btn-hover {
+                transition: all 0.2s ease;
+            }
+            .btn-hover:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
             }
         }
     </style>
 </head>
-
-<body class="font-inter bg-gray-50 text-gray-800 min-h-screen flex flex-col">
-    <!-- 导航栏 -->
-    <header class="bg-white shadow-md sticky top-0 z-50 transition-all duration-300" id="navbar">
-        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-                <i class="fa fa-wrench text-primary text-2xl"></i>
-                <h1 class="text-xl font-bold text-gray-800">全能工具箱</h1>
-            </div>
-            
-            <!-- 用户区域 -->
-            <div class="flex items-center space-x-4">
-                <div id="user-info" class="hidden items-center space-x-2">
-                    <span id="username-display" class="font-medium"></span>
-                    <span class="bg-blue-100 text-primary text-xs px-2 py-1 rounded-full">
-                        <i class="fa fa-star"></i> <span id="user-points">0</span>
-                    </span>
-                    <button id="logout-btn" class="text-gray-500 hover:text-red-500">
-                        <i class="fa fa-sign-out"></i>
-                    </button>
+<body class="bg-dark text-gray-200 font-hoi overflow-hidden h-screen flex flex-col">
+    <!-- 顶部状态栏 -->
+    <header class="bg-primary py-2 px-4 flex justify-between items-center border-b border-gray-700 z-10">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-2xl font-bold text-white flex items-center">
+                <i class="fa fa-globe mr-2 text-accent"></i>国策风云
+            </h1>
+            <div class="hidden md:flex items-center space-x-6 ml-6">
+                <div class="flex items-center">
+                    <i class="fa fa-clock-o mr-1 text-neutral"></i>
+                    <span id="game-date">1936年1月1日</span>
                 </div>
-                <button id="login-btn" class="hidden md:block bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors">
-                    <i class="fa fa-user mr-1"></i> 登录
-                </button>
-                
-                <!-- 桌面导航 -->
-                <nav class="hidden md:flex items-center space-x-6">
-                    <a href="#tools" class="font-medium text-gray-600 hover:text-primary transition-colors">实用工具</a>
-                    <a href="#games" class="font-medium text-gray-600 hover:text-primary transition-colors">小游戏</a>
-                    <a href="#calculators" class="font-medium text-gray-600 hover:text-primary transition-colors">计算器</a>
-                    <a href="#about" class="font-medium text-gray-600 hover:text-primary transition-colors">关于</a>
-                </nav>
-                
-                <!-- 移动端菜单按钮 -->
-                <button class="md:hidden text-gray-600 hover:text-primary" id="menu-toggle">
-                    <i class="fa fa-bars text-xl"></i>
-                </button>
+                <div class="flex items-center">
+                    <i class="fa fa-users mr-1 text-neutral"></i>
+                    <span id="online-players">2/8 玩家</span>
+                </div>
+                <div class="flex items-center">
+                    <i class="fa fa-server mr-1 text-neutral"></i>
+                    <span id="connection-status" class="text-success">已连接</span>
+                </div>
             </div>
         </div>
         
-        <!-- 移动端导航菜单 -->
-        <div class="md:hidden hidden bg-white w-full border-t" id="mobile-menu">
-            <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
-                <a href="#tools" class="py-2 font-medium text-gray-600 hover:text-primary transition-colors">实用工具</a>
-                <a href="#games" class="py-2 font-medium text-gray-600 hover:text-primary transition-colors">小游戏</a>
-                <a href="#calculators" class="py-2 font-medium text-gray-600 hover:text-primary transition-colors">计算器</a>
-                <a href="#about" class="py-2 font-medium text-gray-600 hover:text-primary transition-colors">关于</a>
-                <button id="mobile-login-btn" class="py-2 font-medium text-primary hover:text-blue-700 transition-colors text-left">
-                    <i class="fa fa-user mr-1"></i> 登录/注册
-                </button>
+        <div class="flex items-center space-x-3">
+            <button id="pause-btn" class="bg-panel hover:bg-gray-700 text-white py-1 px-3 rounded btn-hover">
+                <i class="fa fa-pause mr-1"></i>暂停
+            </button>
+            <button id="options-btn" class="bg-panel hover:bg-gray-700 text-white py-1 px-3 rounded btn-hover">
+                <i class="fa fa-cog mr-1"></i>选项
+            </button>
+            <div class="flex items-center ml-2">
+                <img src="https://picsum.photos/id/1005/32/32" alt="玩家头像" class="w-8 h-8 rounded-full border-2 border-accent">
+                <span class="ml-2 hidden md:inline">玩家1 (德国)</span>
             </div>
         </div>
     </header>
 
-    <!-- 主内容区 -->
-    <main class="flex-grow">
-        <!-- 英雄区域 -->
-        <section class="gradient-bg text-white py-16 md:py-24">
-            <div class="container mx-auto px-4 text-center">
-                <h2 class="text-[clamp(2rem,5vw,3.5rem)] font-bold mb-4 text-shadow">
-                    一站式工具箱与娱乐中心
-                </h2>
-                <p class="text-[clamp(1rem,2vw,1.25rem)] max-w-2xl mx-auto mb-8 text-blue-100">
-                    集成实用工具与趣味游戏，满足您的日常需求与休闲娱乐
-                </p>
-                <div class="flex flex-col sm:flex-row justify-center gap-4">
-                    <a href="#tools" class="bg-white text-primary hover:bg-blue-50 font-medium px-6 py-3 rounded-lg transition-colors shadow-lg">
-                        浏览工具 <i class="fa fa-arrow-right ml-2"></i>
-                    </a>
-                    <a href="#games" class="bg-transparent border-2 border-white text-white hover:bg-white/10 font-medium px-6 py-3 rounded-lg transition-colors">
-                        开始游戏 <i class="fa fa-gamepad ml-2"></i>
-                    </a>
+    <!-- 主要游戏区域 -->
+    <main class="flex flex-1 overflow-hidden">
+        <!-- 左侧控制面板 -->
+        <aside class="w-64 bg-panel panel-border flex flex-col h-full z-10">
+            <div class="p-3 border-b border-gray-700">
+                <h2 class="font-bold text-lg text-white">德国</h2>
+                <div class="flex justify-between mt-1 text-sm">
+                    <span>法西斯主义</span>
+                    <span class="text-accent">1936年</span>
                 </div>
             </div>
-        </section>
-
-        <!-- 工具分类 -->
-        <section id="tools" class="py-16 bg-white">
-            <div class="container mx-auto px-4">
-                <div class="text-center mb-12">
-                    <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold mb-4">实用工具</h2>
-                    <p class="text-gray-600 max-w-2xl mx-auto">精心挑选的实用工具，帮助您提高工作效率和解决日常问题</p>
-                </div>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- 文本工具 -->
-                    <div class="bg-gray-50 rounded-xl shadow-sm p-6 card-hover">
-                        <div class="bg-blue-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                            <i class="fa fa-file-text-o text-primary text-xl"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold mb-2">文本工具</h3>
-                        <p class="text-gray-600 mb-4">处理文本的实用功能，包括大小写转换、字数统计等</p>
-                        <button class="text-primary font-medium hover:text-blue-700 transition-colors tool-btn" data-tool="text-tools" data-points="5">
-                            使用工具 <i class="fa fa-angle-right ml-1"></i>
-                        </button>
+            
+            <!-- 资源面板 -->
+            <div class="p-3 border-b border-gray-700">
+                <h3 class="text-sm uppercase text-neutral font-semibold mb-2">资源</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="flex items-center">
+                        <i class="fa fa-bolt text-yellow-400 w-5"></i>
+                        <span class="ml-1">能源: 125</span>
                     </div>
-                    
-                    <!-- 密码生成器 -->
-                    <div class="bg-gray-50 rounded-xl shadow-sm p-6 card-hover">
-                        <div class="bg-purple-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                            <i class="fa fa-key text-accent text-xl"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold mb-2">密码生成器</h3>
-                        <p class="text-gray-600 mb-4">生成高强度随机密码，保护您的在线安全</p>
-                        <button class="text-primary font-medium hover:text-blue-700 transition-colors tool-btn" data-tool="password-generator" data-points="5">
-                            使用工具 <i class="fa fa-angle-right ml-1"></i>
-                        </button>
+                    <div class="flex items-center">
+                        <i class="fa fa-industry text-gray-400 w-5"></i>
+                        <span class="ml-1">工业: 89</span>
                     </div>
-                    
-                    <!-- 颜色选择器 -->
-                    <div class="bg-gray-50 rounded-xl shadow-sm p-6 card-hover">
-                        <div class="bg-green-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                            <i class="fa fa-eyedropper text-secondary text-xl"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold mb-2">颜色选择器</h3>
-                        <p class="text-gray-600 mb-4">拾取和转换颜色值，支持RGB、HEX等多种格式</p>
-                        <button class="text-primary font-medium hover:text-blue-700 transition-colors tool-btn" data-tool="color-picker" data-points="5">
-                            使用工具 <i class="fa fa-angle-right ml-1"></i>
-                        </button>
+                    <div class="flex items-center">
+                        <i class="fa fa-leaf text-green-500 w-5"></i>
+                        <span class="ml-1">补给: 210</span>
                     </div>
-                    
-                    <!-- 单位转换器 -->
-                    <div class="bg-gray-50 rounded-xl shadow-sm p-6 card-hover">
-                        <div class="bg-amber-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                            <i class="fa fa-exchange text-amber-600 text-xl"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold mb-2">单位转换器</h3>
-                        <p class="text-gray-600 mb-4">转换长度、重量、温度等各种计量单位</p>
-                        <button class="text-primary font-medium hover:text-blue-700 transition-colors tool-btn" data-tool="unit-converter" data-points="5">
-                            使用工具 <i class="fa fa-angle-right ml-1"></i>
-                        </button>
-                    </div>
-                    
-                    <!-- 二维码生成器 -->
-                    <div class="bg-gray-50 rounded-xl shadow-sm p-6 card-hover">
-                        <div class="bg-red-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                            <i class="fa fa-qrcode text-red-500 text-xl"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold mb-2">二维码生成器</h3>
-                        <p class="text-gray-600 mb-4">将文本、链接等信息转换为二维码图片</p>
-                        <button class="text-primary font-medium hover:text-blue-700 transition-colors tool-btn" data-tool="qr-generator" data-points="5">
-                            使用工具 <i class="fa fa-angle-right ml-1"></i>
-                        </button>
-                    </div>
-                    
-                    <!-- 计时器 -->
-                    <div class="bg-gray-50 rounded-xl shadow-sm p-6 card-hover">
-                        <div class="bg-teal-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                            <i class="fa fa-clock-o text-teal-600 text-xl"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold mb-2">计时器</h3>
-                        <p class="text-gray-600 mb-4">设置倒计时，帮助您管理时间和提高效率</p>
-                        <button class="text-primary font-medium hover:text-blue-700 transition-colors tool-btn" data-tool="timer" data-points="5">
-                            使用工具 <i class="fa fa-angle-right ml-1"></i>
-                        </button>
+                    <div class="flex items-center">
+                        <i class="fa fa-money text-green-400 w-5"></i>
+                        <span class="ml-1">资金: 5420</span>
                     </div>
                 </div>
             </div>
-        </section>
-
-        <!-- 游戏区域 -->
-        <section id="games" class="py-16 bg-gray-50">
-            <div class="container mx-auto px-4">
-                <div class="text-center mb-12">
-                    <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold mb-4">休闲小游戏</h2>
-                    <p class="text-gray-600 max-w-2xl mx-auto">工作学习之余，来一局轻松有趣的小游戏放松一下吧</p>
-                </div>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- 贪吃蛇 -->
-                    <div class="bg-white rounded rounded-xl shadow-sm overflowflow-hidden card-hover">
-                        <div class="h-48 bg-gray-100 relative">
-                            <img src="https://picsum.photos/seed/snake/600/400" alt="贪吃蛇游戏预览" class="w-full h-full object-cover">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                            <div class="absolute bottom-4 left-4 text-white">
-                                <span class="bg-primary/90 text-white text-xs font-semibold px-2.5 py-0.5 rounded">经典</span>
-                            </div>
-                        </div>
-                        <div class="p-6">
-                            <h3 class="text-xl font-semibold mb-2">贪吃蛇</h3>
-                            <p class="text-gray-600 mb-4">经典的贪吃蛇游戏，控制蛇吃食物并避免碰撞</p>
-                            <button class="text-primary font-medium hover:text-blue-700 transition-colors game-btn" data-game="snake" data-points="10">
-                                开始游戏 <i class="fa fa-gamepad ml-1"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- 记忆卡片 -->
-                    <div class="bg-white rounded-xl shadow-sm overflow-hidden card-hover">
-                        <div class="h-48 bg-gray-100 relative">
-                            <img src="https://picsum.photos/seed/memory/600/400" alt="记忆卡片游戏预览" class="w-full h-full object-cover">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                            <div class="absolute bottom-4 left-4 text-white">
-                                <span class="bg-accent/90 text-white text-xs font-semibold px-2.5 py-0.5 rounded">益智</span>
-                            </div>
-                        </div>
-                        <div class="p-6">
-                            <h3 class="text-xl font-semibold mb-2">记忆卡片</h3>
-                            <p class="text-gray-600 mb-4">翻转卡片寻找配对，锻炼您的记忆力</p>
-                            <button class="text-primary font-medium hover:text-blue-700 transition-colors game-btn" data-game="memory" data-points="10">
-                                开始游戏 <i class="fa fa-gamepad ml-1"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- 打砖块 -->
-                    <div class="bg-white rounded-xl shadow-sm overflow-hidden card-hover">
-                        <div class="h-48 bg-gray-100 relative">
-                            <img src="https://picsum.photos/seed/breakout/600/400" alt="打砖块游戏预览" class="w-full h-full object-cover">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                            <div class="absolute bottom-4 left-4 text-white">
-                                <span class="bg-secondary/90 text-white text-xs font-semibold px-2.5 py-0.5 rounded">动作</span>
-                            </div>
-                        </div>
-                        <div class="p-6">
-                            <h3 class="text-xl font-semibold mb-2">打砖块</h3>
-                            <p class="text-gray-600 mb-4">控制挡板反弹小球，击碎所有砖块</p>
-                            <button class="text-primary font-medium hover:text-blue-700 transition-colors game-btn" data-game="breakout" data-points="10">
-                                开始游戏 <i class="fa fa-gamepad ml-1"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 计算器区域 -->
-        <section id="calculators" class="py-16 bg-white">
-            <div class="container mx-auto px-4">
-                <div class="text-center mb-12">
-                    <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold mb-4">计算器工具</h2>
-                    <p class="text-gray-600 max-w-2xl mx-auto">各种专业计算器，满足您不同场景的计算需求</p>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <!-- 标准计算器 -->
-                    <div class="bg-gray-50 rounded-xl shadow-sm p-6">
-                        <h3 class="text-xl font-semibold mb-4">标准计算器</h3>
-                        <div class="calculator bg-white p-4 rounded-lg shadow-inner">
-                            <div class="calculator-display bg-gray-100 rounded p-3 mb-4 text-right h-16 flex items-center justify-end text-2xl font-medium" id="calc-display">0</div>
-                            <div class="grid grid-cols-4 gap-2">
-                                <button class="calc-btn bg-red-100 hover:bg-red-200 text-red-600 py-3 rounded" data-value="C">C</button>
-                                <button class="calc-btn bg-gray-100 hover:bg-gray-200 py-3 rounded" data-value="←">←</button>
-                                <button class="calc-btn bg-gray-100 hover:bg-gray-200 py-3 rounded" data-value="%">%</button>
-                                <button class="calc-btn bg-orange-100 hover:bg-orange-200 text-orange-600 py-3 rounded" data-value="/">÷</button>
-                                
-                                <button class="calc-btn bg-gray-50 hover:bg-gray-100 py-3 rounded" data-value="7">7</button>
-                                <button class="calc-btn bg-gray-50 hover:bg-gray-100 py-3 rounded" data-value="8">8</button>
-                                <button class="calc-btn bg-gray-50 hover:bg-gray-100 py-3 rounded" data-value="9">9</button>
-                                <button class="calc-btn bg-orange-100 hover:bg-orange-200 text-orange-600 py-3 rounded" data-value="*">×</button>
-                                
-                                <button class="calc-btn bg-gray-50 hover:bg-gray-100 py-3 rounded" data-value="4">4</button>
-                                <button class="calc-btn bg-gray-50 hover:bg-gray-100 py-3 rounded" data-value="5">5</button>
-                                <button class="calc-btn bg-gray-50 hover:bg-gray-100 py-3 rounded" data-value="6">6</button>
-                                <button class="calc-btn bg-orange-100 hover:bg-orange-200 text-orange-600 py-3 rounded" data-value="-">-</button>
-                                
-                                <button class="calc-btn bg-gray-50 hover:bg-gray-100 py-3 rounded" data-value="1">1</button>
-                                <button class="calc-btn bg-gray-50 hover:bg-gray-100 py-3 rounded" data-value="2">2</button>
-                                <button class="calc-btn bg-gray-50 hover:bg-gray-100 py-3 rounded" data-value="3">3</button>
-                                <button class="calc-btn bg-orange-100 hover:bg-orange-200 text-orange-600 py-3 rounded" data-value="+">+</button>
-                                
-                                <button class="calc-btn bg-gray-50 hover:bg-gray-100 py-3 rounded" data-value="±">±</button>
-                                <button class="calc-btn bg-gray-50 hover:bg-gray-100 py-3 rounded" data-value="0">0</button>
-                                <button class="calc-btn bg-gray-50 hover:bg-gray-100 py-3 rounded" data-value=".">.</button>
-                                <button class="calc-btn bg-primary hover:bg-primary/90 text-white py-3 rounded" data-value="=">=</button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- BMI计算器 -->
-                    <div class="bg-gray-50 rounded-xl shadow-sm p-6">
-                        <h3 class="text-xl font-semibold mb-4">BMI计算器</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-gray-700 mb-1">身高 (厘米)</label>
-                                <input type="number" id="bmi-height" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" placeholder="例如: 175">
-                            </div>
-                            <div>
-                                <label class="block text-gray-700 mb-1">体重 (千克)</label>
-                                <input type="number" id="bmi-weight" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" placeholder="例如: 65">
-                            </div>
-                            <button id="calculate-bmi" class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 rounded-lg transition-colors" data-points="5">
-                                计算BMI
-                            </button>
-                            
-                            <div id="bmi-result" class="mt-6 p-4 rounded-lg hidden">
-                                <div class="text-center">
-                                    <h4 class="text-lg font-semibold mb-2">您的BMI指数</h4>
-                                    <p class="text-3xl font-bold mb-2" id="bmi-value">0</p>
-                                    <p class="text-gray-600" id="bmi-category">--</p>
-                                </div>
-                                <div class="mt-4">
-                                    <canvas id="bmi-chart" height="80"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 关于区域 -->
-        <section id="about" class="py-16 bg-gray-50">
-            <div class="container mx-auto px-4">
-                <div class="max-w-3xl mx-auto text-center">
-                    <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold mb-4">关于全能工具箱</h2>
-                    <p class="text-gray-600 mb-6">
-                        全能工具箱是一个集成了多种实用工具和休闲小游戏的网页应用，旨在为用户提供便捷的在线工具服务和轻松的娱乐体验。
-                    </p>
-                    <p class="text-gray-600 mb-8">
-                        所有工具和游戏都在浏览器中运行，无需安装任何软件，保护您的隐私和数据安全。登录后可积累积分，解锁更多功能！
-                    </p>
-                    <div class="flex justify-center space-x-4">
-                        <a href="#" class="text-gray-600 hover:text-primary transition-colors">
-                            <i class="fa fa-github text-2xl"></i>
+            
+            <!-- 导航菜单 -->
+            <nav class="flex-1 overflow-y-auto">
+                <ul>
+                    <li>
+                        <a href="#" class="flex items-center p-3 bg-primary border-l-4 border-accent">
+                            <i class="fa fa-map-o w-6"></i>
+                            <span>地图视图</span>
                         </a>
-                        <a href="#" class="text-gray-600 hover:text-primary transition-colors">
-                            <i class="fa fa-twitter text-2xl"></i>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center p-3 hover:bg-primary/50 transition-colors">
+                            <i class="fa fa-sitemap w-6"></i>
+                            <span>政治</span>
                         </a>
-                        <a href="#" class="text-gray-600 hover:text-primary transition-colors">
-                            <i class="fa fa-envelope text-2xl"></i>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center p-3 hover:bg-primary/50 transition-colors">
+                            <i class="fa fa-shield w-6"></i>
+                            <span>军事</span>
                         </a>
-                    </div>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center p-3 hover:bg-primary/50 transition-colors">
+                            <i class="fa fa-industry w-6"></i>
+                            <span>工业</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center p-3 hover:bg-primary/50 transition-colors">
+                            <i class="fa fa-handshake-o w-6"></i>
+                            <span>外交</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center p-3 hover:bg-primary/50 transition-colors">
+                            <i class="fa fa-book w-6"></i>
+                            <span>国策</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center p-3 hover:bg-primary/50 transition-colors">
+                            <i class="fa fa-users w-6"></i>
+                            <span>联机玩家</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <!-- 底部信息 -->
+            <div class="p-2 border-t border-gray-700 text-xs text-neutral">
+                <div class="flex justify-between">
+                    <span>版本 0.1.0</span>
+                    <span id="ping-indicator">延迟: 45ms</span>
                 </div>
             </div>
-        </section>
-    </main>
+        </aside>
 
-    <!-- 工具和游戏模态框 -->
-    <div id="tool-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div class="p-6 border-b flex justify-between items-center">
-                <h3 class="text-xl font-bold" id="modal-title">工具名称</h3>
-                <button id="close-modal" class="text-gray-500 hover:text-gray-700">
-                    <i class="fa fa-times text-xl"></i>
+        <!-- 中央地图区域 -->
+        <section class="flex-1 relative bg-primary overflow-hidden">
+            <!-- 地图容器 -->
+            <div id="map-container" class="absolute inset-0 map-grid bg-[url('https://picsum.photos/id/101/1920/1080')] bg-cover bg-center">
+                <!-- 地图将通过JS动态生成 -->
+                <div class="absolute top-[30%] left-[45%] w-12 h-12 bg-secondary/70 rounded-full flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-accent transition-all" data-province="berlin">
+                    <span class="text-xs font-bold">柏林</span>
+                </div>
+                <div class="absolute top-[35%] left-[50%] w-10 h-10 bg-primary/70 rounded-full flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-accent transition-all" data-province="warsaw">
+                    <span class="text-xs">华沙</span>
+                </div>
+                <div class="absolute top-[25%] left-[35%] w-10 h-10 bg-primary/70 rounded-full flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-accent transition-all" data-province="paris">
+                    <span class="text-xs">巴黎</span>
+                </div>
+                <div class="absolute top-[20%] left-[30%] w-10 h-10 bg-primary/70 rounded-full flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-accent transition-all" data-province="london">
+                    <span class="text-xs">伦敦</span>
+                </div>
+            </div>
+            
+            <!-- 地图控制按钮 -->
+            <div class="absolute bottom-4 right-4 flex flex-col space-y-2 z-10">
+                <button id="zoom-in" class="bg-panel w-10 h-10 rounded-full flex items-center justify-center shadow-lg btn-hover">
+                    <i class="fa fa-plus"></i>
+                </button>
+                <button id="zoom-out" class="bg-panel w-10 h-10 rounded-full flex items-center justify-center shadow-lg btn-hover">
+                    <i class="fa fa-minus"></i>
+                </button>
+                <button id="reset-view" class="bg-panel w-10 h-10 rounded-full flex items-center justify-center shadow-lg btn-hover">
+                    <i class="fa fa-home"></i>
                 </button>
             </div>
-            <div class="flex-grow overflow-y-auto p-6" id="modal-content">
-                <!-- 工具内容将通过JavaScript动态加载 -->
-                <div class="text-center py-12">
-                    <i class="fa fa-cog text-gray-300 text-5xl mb-4"></i>
-                    <p class="text-gray-500">工具加载中...</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 登录模态框 -->
-    <div id="login-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-            <div class="p-6 border-b">
-                <h3 class="text-xl font-bold" id="auth-modal-title">登录</h3>
-            </div>
-            <div class="p-6" id="auth-modal-content">
-                <!-- 登录表单 -->
-                <div id="login-form">
-                    <div class="mb-4">
-                        <label class="block text-gray-700 mb-2" for="login-username">
-                            用户名
-                        </label>
-                        <input class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" id="login-username" type="text" placeholder="请输入用户名">
-                    </div>
-                    <div class="mb-6">
-                        <label class="block text-gray-700 mb-2" for="login-password">
-                            密码
-                        </label>
-                        <input class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" id="login-password" type="password" placeholder="请输入密码">
-                    </div>
-                    <div class="mb-4">
-                        <button id="submit-login" class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 rounded-lg transition-colors">
-                            登录
-                        </button>
-                    </div>
-                    <p class="text-center text-gray-600">
-                        还没有账号？ <a href="#" id="switch-to-register" class="text-primary hover:underline">注册</a>
-                    </p>
-                </div>
-                
-                <!-- 注册表单 (默认隐藏) -->
-                <div id="register-form" class="hidden">
-                    <div class="mb-4">
-                        <label class="block text-gray-700 mb-2" for="register-username">
-                            用户名
-                        </label>
-                        <input class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" id="register-username" type="text" placeholder="请创建用户名">
-                    </div>
-                    <div class="mb-4">
-                        <label class="block text-gray-700 mb-2" for="register-password">
-                            密码
-                        </label>
-                        <input class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" id="register-password" type="password" placeholder="请创建密码（至少6位）">
-                    </div>
-                    <div class="mb-6">
-                        <label class="block text-gray-700 mb-2" for="register-confirm">
-                            确认密码
-                        </label>
-                        <input class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" id="register-confirm" type="password" placeholder="请再次输入密码">
-                    </div>
-                    <div class="mb-4">
-                        <button id="submit-register" class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 rounded-lg transition-colors">
-                            注册
-                        </button>
-                    </div>
-                    <p class="text-center text-gray-600">
-                        已有账号？ <a href="#" id="switch-to-login" class="text-primary hover:underline">登录</a>
-                    </p>
-                </div>
-                
-                <div id="auth-message" class="mt-4 p-3 rounded-lg hidden"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 积分提示 -->
-    <div id="points-notification" class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 flex items-center">
-        <i class="fa fa-star mr-2"></i>
-        <span>获得 <span id="points-amount">5</span> 积分！</span>
-    </div>
-
-    <!-- 页脚 -->
-    <footer class="bg-dark text-gray-400 py-12">
-        <div class="container mx-auto px-4">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div>
-                    <div class="flex items-center space-x-2 mb-4">
-                        <i class="fa fa-wrench text-primary text-xl"></i>
-                        <h3 class="text-white text-lg font-semibold">全能工具箱</h3>
-                    </div>
-                    <p class="mb-4">
-                        一站式解决您的日常需求，提供实用工具与休闲游戏
-                    </p>
-                    <div class="flex space-x-4">
-                        <a href="#" class="hover:text-primary transition-colors">
-                            <i class="fa fa-github"></i>
-                        </a>
-                        <a href="#" class="hover:text-primary transition-colors">
-                            <i class="fa fa-twitter"></i>
-                        </a>
-                        <a href="#" class="hover:text-primary transition-colors">
-                            <i class="fa fa-envelope"></i>
-                        </a>
-                    </div>
-                </div>
-                
-                <div>
-                    <h4 class="text-white text-md font-semibold mb-4">快速链接</h4>
-                    <ul class="space-y-2">
-                        <li><a href="#tools" class="hover:text-primary transition-colors">实用工具</a></li>
-                        <li><a href="#games" class="hover:text-primary transition-colors">小游戏</a></li>
-                        <li><a href="#calculators" class="hover:text-primary transition-colors">计算器</a></li>
-                        <li><a href="#about" class="hover:text-primary transition-colors">关于我们</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h4 class="text-white text-md font-semibold mb-4">联系我们</h4>
-                    <ul class="space-y-2">
-                        <li class="flex items-center">
-                            <i class="fa fa-envelope-o mr-2"></i>
-                            <a href="mailto:contact@example.com" class="hover:text-primary transition-colors">contact@example.com</a>
-                        </li>
-                        <li class="flex items-center">
-                            <i class="fa fa-github mr-2"></i>
-                            <a href="#" class="hover:text-primary transition-colors">GitHub</a>
-                        </li>
-                    </ul>
+            
+            <!-- 时间控制 -->
+            <div class="absolute bottom-4 left-4 bg-panel p-2 rounded-lg shadow-lg z-10 panel-border">
+                <div class="flex items-center space-x-3">
+                    <button id="speed-down" class="text-neutral hover:text-white">
+                        <i class="fa fa-step-backward"></i>
+                    </button>
+                    <button id="play-pause" class="bg-accent text-white py-1 px-3 rounded btn-hover">
+                        <i class="fa fa-play mr-1"></i>正常速度
+                    </button>
+                    <button id="speed-up" class="text-neutral hover:text-white">
+                        <i class="fa fa-step-forward"></i>
+                    </button>
                 </div>
             </div>
             
-            <div class="border-t border-gray-700 mt-8 pt-8 text-center">
-                <p>&copy; 2023 全能工具箱 | 保留所有权利</p>
+            <!-- 事件通知 -->
+            <div id="event-notification" class="hidden absolute top-4 right-4 w-80 bg-panel p-4 rounded-lg shadow-lg z-20 panel-border animate-fade-in">
+                <div class="flex justify-between items-start">
+                    <h3 class="font-bold text-white">新事件</h3>
+                    <button class="close-event text-neutral hover:text-white">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+                <p class="mt-2 text-sm">德国重新军事化莱茵兰地区，国际社会反应强烈。</p>
+                <div class="mt-3 flex justify-end">
+                    <button class="bg-accent text-white text-sm py-1 px-3 rounded btn-hover">
+                        处理事件
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 右侧信息面板 -->
+        <aside class="w-80 bg-panel panel-border flex flex-col h-full z-10 hidden md:flex">
+            <!-- 省份信息 -->
+            <div class="p-3 border-b border-gray-700">
+                <h2 class="font-bold text-lg text-white">柏林</h2>
+                <div class="flex items-center text-sm text-neutral mt-1">
+                    <i class="fa fa-map-marker mr-1"></i>
+                    <span>德国 - 普鲁士地区</span>
+                </div>
+            </div>
+            
+            <!-- 省份数据 -->
+            <div class="p-3 border-b border-gray-700">
+                <h3 class="text-sm uppercase text-neutral font-semibold mb-2">省份数据</h3>
+                <div class="space-y-2">
+                    <div>
+                        <div class="flex justify-between text-xs text-neutral">
+                            <span>基础设施</span>
+                            <span>85%</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-1.5 mt-1">
+                            <div class="bg-info h-1.5 rounded-full" style="width: 85%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs text-neutral">
+                            <span>工业产能</span>
+                            <span>12/12</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-1.5 mt-1">
+                            <div class="bg-warning h-1.5 rounded-full" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs text-neutral">
+                            <span>民心支持</span>
+                            <span>92%</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-1.5 mt-1">
+                            <div class="bg-success h-1.5 rounded-full" style="width: 92%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 驻军信息 -->
+            <div class="p-3 border-b border-gray-700">
+                <h3 class="text-sm uppercase text-neutral font-semibold mb-2">驻军</h3>
+                <div class="space-y-2">
+                    <div class="flex items-center p-2 bg-primary/50 rounded">
+                        <img src="https://picsum.photos/id/1074/32/32" alt="陆军" class="w-8 h-8 rounded">
+                        <div class="ml-2">
+                            <div class="font-medium text-sm">第1装甲师</div>
+                            <div class="text-xs text-neutral">兵力: 12,500</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center p-2 bg-primary/50 rounded">
+                        <img src="https://picsum.photos/id/1062/32/32" alt="空军" class="w-8 h-8 rounded">
+                        <div class="ml-2">
+                            <div class="font-medium text-sm">第2航空联队</div>
+                            <div class="text-xs text-neutral">飞机: 144</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 生产队列 -->
+            <div class="p-3 border-b border-gray-700">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-sm uppercase text-neutral font-semibold">生产队列</h3>
+                    <button class="text-accent text-xs hover:underline">
+                        <i class="fa fa-plus mr-1"></i>添加
+                    </button>
+                </div>
+                <div class="space-y-1">
+                    <div class="flex justify-between items-center text-sm p-1.5 bg-primary/30 rounded">
+                        <span>IV号坦克</span>
+                        <span class="text-xs text-neutral">剩余: 14天</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm p-1.5 bg-primary/30 rounded">
+                        <span>JU-88轰炸机</span>
+                        <span class="text-xs text-neutral">剩余: 21天</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm p-1.5 bg-primary/30 rounded opacity-70">
+                        <span>步兵装备</span>
+                        <span class="text-xs text-neutral">剩余: 35天</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 联机聊天 -->
+            <div class="flex-1 flex flex-col">
+                <div class="p-3 border-b border-gray-700">
+                    <h3 class="text-sm uppercase text-neutral font-semibold">联机聊天</h3>
+                </div>
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-3 space-y-3">
+                    <div class="flex">
+                        <img src="https://picsum.photos/id/1012/32/32" alt="玩家2头像" class="w-6 h-6 rounded-full">
+                        <div class="ml-2">
+                            <div class="text-xs font-semibold">玩家2 (苏联)</div>
+                            <div class="text-sm bg-primary/50 p-2 rounded max-w-[80%]">
+                                我正在扩充西部边境的军队
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex">
+                        <img src="https://picsum.photos/id/1025/32/32" alt="玩家3头像" class="w-6 h-6 rounded-full">
+                        <div class="ml-2">
+                            <div class="text-xs font-semibold">玩家3 (英国)</div>
+                            <div class="text-sm bg-primary/50 p-2 rounded max-w-[80%]">
+                                我们不会容忍任何对捷克斯洛伐克的侵略
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <div class="mr-2 text-right">
+                            <div class="text-xs font-semibold">我</div>
+                            <div class="text-sm bg-accent/80 p-2 rounded max-w-[80%]">
+                                德国需要更多的生存空间
+                            </div>
+                        </div>
+                        <img src="https://picsum.photos/id/1005/32/32" alt="我的头像" class="w-6 h-6 rounded-full">
+                    </div>
+                </div>
+                <div class="p-3 border-t border-gray-700">
+                    <div class="flex">
+                        <input type="text" id="chat-input" placeholder="输入消息..." class="flex-1 bg-primary border border-gray-700 rounded-l px-3 py-2 text-sm focus:outline-none focus:border-accent">
+                        <button id="send-chat" class="bg-accent text-white px-3 py-2 rounded-r hover:bg-accent/80 transition-colors">
+                            <i class="fa fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- 联机玩家面板 (默认隐藏) -->
+    <div id="players-panel" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
+        <div class="bg-panel w-96 rounded-lg panel-border max-h-[80vh] flex flex-col">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                <h2 class="font-bold text-lg text-white">联机玩家</h2>
+                <button id="close-players" class="text-neutral hover:text-white">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4">
+                <div class="space-y-3">
+                    <div class="flex items-center p-3 bg-primary/50 rounded">
+                        <img src="https://picsum.photos/id/1005/48/48" alt="玩家1头像" class="w-10 h-10 rounded-full border-2 border-accent">
+                        <div class="ml-3">
+                            <div class="font-medium">玩家1 (你)</div>
+                            <div class="text-sm text-neutral">德国 - 在线</div>
+                        </div>
+                        <div class="ml-auto">
+                            <span class="bg-success text-white text-xs px-2 py-1 rounded-full">准备就绪</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center p-3 bg-primary/50 rounded">
+                        <img src="https://picsum.photos/id/1012/48/48" alt="玩家2头像" class="w-10 h-10 rounded-full">
+                        <div class="ml-3">
+                            <div class="font-medium">玩家2</div>
+                            <div class="text-sm text-neutral">苏联 - 在线</div>
+                        </div>
+                        <div class="ml-auto">
+                            <span class="bg-success text-white text-xs px-2 py-1 rounded-full">准备就绪</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center p-3 bg-primary/50 rounded">
+                        <img src="https://picsum.photos/id/1025/48/48" alt="玩家3头像" class="w-10 h-10 rounded-full">
+                        <div class="ml-3">
+                            <div class="font-medium">玩家3</div>
+                            <div class="text-sm text-neutral">英国 - 在线</div>
+                        </div>
+                        <div class="ml-auto">
+                            <span class="bg-success text-white text-xs px-2 py-1 rounded-full">准备就绪</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center p-3 bg-primary/50 rounded">
+                        <img src="https://picsum.photos/id/1074/48/48" alt="玩家4头像" class="w-10 h-10 rounded-full">
+                        <div class="ml-3">
+                            <div class="font-medium">玩家4</div>
+                            <div class="text-sm text-neutral">美国 - 在线</div>
+                        </div>
+                        <div class="ml-auto">
+                            <span class="bg-warning text-white text-xs px-2 py-1 rounded-full">未准备</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center p-3 bg-primary/50 rounded opacity-50">
+                        <img src="https://picsum.photos/id/1066/48/48" alt="空位" class="w-10 h-10 rounded-full">
+                        <div class="ml-3">
+                            <div class="font-medium">空位</div>
+                            <div class="text-sm text-neutral">可选择国家</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-gray-700">
+                <button id="start-game" class="w-full bg-accent text-white py-2 rounded btn-hover">
+                    开始游戏 (等待玩家4准备)
+                </button>
             </div>
         </div>
-    </footer>
+    </div>
 
-    <!-- JavaScript -->
     <script>
-        // 用户系统和积分管理
-        const userSystem = {
-            currentUser: null,
-            users: JSON.parse(localStorage.getItem('toolboxUsers')) || {},
-            
-            // 初始化
-            init() {
-                // 检查是否有已登录用户
-                const savedUser = localStorage.getItem('currentToolboxUser');
-                if (savedUser) {
-                    this.login(savedUser);
-                } else {
-                    this.updateUI();
-                }
-            },
-            
-            // 注册新用户
-            register(username, password) {
-                // 检查用户名是否已存在
-                if (this.users[username]) {
-                    return { success: false, message: '用户名已存在' };
-                }
-                
-                // 简单验证
-                if (password.length < 6) {
-                    return { success: false, message: '密码长度至少6位' };
-                }
-                
-                // 保存用户（实际应用中应该加密密码）
-                this.users[username] = {
-                    password: password,
-                    points: 0,
-                    lastLogin: null
-                };
-                
-                // 保存到本地存储
-                localStorage.setItem('toolboxUsers', JSON.stringify(this.users));
-                
-                return { success: true, message: '注册成功，请登录' };
-            },
-            
-            // 登录
-            login(username, password = null) {
-                // 如果只提供了username，视为从本地存储恢复登录状态
-                if (password === null) {
-                    if (this.users[username]) {
-                        this.currentUser = username;
-                        this.users[username].lastLogin = new Date().toISOString();
-                        localStorage.setItem('toolboxUsers', JSON.stringify(this.users));
-                        localStorage.setItem('currentToolboxUser', username);
-                        this.updateUI();
-                        return { success: true };
-                    }
-                    return { success: false, message: '用户不存在' };
-                }
-                
-                // 验证用户名和密码
-                const user = this.users[username];
-                if (!user) {
-                    return { success: false, message: '用户名或密码错误' };
-                }
-                
-                if (user.password !== password) {
-                    return { success: false, message: '用户名或密码错误' };
-                }
-                
-                // 登录成功
-                this.currentUser = username;
-                user.lastLogin = new Date().toISOString();
-                localStorage.setItem('toolboxUsers', JSON.stringify(this.users));
-                localStorage.setItem('currentToolboxUser', username);
-                this.updateUI();
-                
-                return { success: true, message: '登录成功' };
-            },
-            
-            // 登出
-            logout() {
-                this.currentUser = null;
-                localStorage.removeItem('currentToolboxUser');
-                this.updateUI();
-            },
-            
-            // 添加积分
-            addPoints(amount) {
-                if (!this.currentUser) return false;
-                
-                this.users[this.currentUser].points += amount;
-                localStorage.setItem('toolboxUsers', JSON.stringify(this.users));
-                this.updateUI();
-                
-                return true;
-            },
-            
-            // 获取当前用户积分
-            getPoints() {
-                if (!this.currentUser) return 0;
-                return this.users[this.currentUser].points || 0;
-            },
-            
-            // 更新UI显示
-            updateUI() {
-                const userInfo = document.getElementById('user-info');
-                const loginBtn = document.getElementById('login-btn');
-                const usernameDisplay = document.getElementById('username-display');
-                const userPoints = document.getElementById('user-points');
-                
-                if (this.currentUser) {
-                    // 显示用户信息
-                    userInfo.classList.remove('hidden');
-                    userInfo.classList.add('flex');
-                    loginBtn.classList.add('hidden');
-                    
-                    usernameDisplay.textContent = this.currentUser;
-                    userPoints.textContent = this.getPoints();
-                } else {
-                    // 显示登录按钮
-                    userInfo.classList.add('hidden');
-                    userInfo.classList.remove('flex');
-                    loginBtn.classList.remove('hidden');
-                }
-            }
+        // 游戏状态管理
+        const gameState = {
+            date: { year: 1936, month: 1, day: 1 },
+            speed: 1, // 1=正常, 2=快速, 3=超快速
+            isPaused: false,
+            zoomLevel: 1,
+            players: [
+                { id: 1, name: "玩家1", country: "德国", ready: true, online: true, isYou: true },
+                { id: 2, name: "玩家2", country: "苏联", ready: true, online: true },
+                { id: 3, name: "玩家3", country: "英国", ready: true, online: true },
+                { id: 4, name: "玩家4", country: "美国", ready: false, online: true }
+            ],
+            selectedProvince: "berlin"
         };
 
-        // 显示积分通知
-        function showPointsNotification(amount) {
-            const notification = document.getElementById('points-notification');
-            const pointsAmount = document.getElementById('points-amount');
+        // WebSocket连接模拟
+        class WebSocketMock {
+            constructor(url) {
+                this.url = url;
+                this.connected = false;
+                this.callbacks = {
+                    onopen: null,
+                    onmessage: null,
+                    onclose: null,
+                    onerror: null
+                };
+                
+                // 模拟连接建立
+                setTimeout(() => {
+                    this.connected = true;
+                    if (this.callbacks.onopen) this.callbacks.onopen();
+                }, 1000);
+            }
             
-            pointsAmount.textContent = amount;
-            notification.classList.remove('translate-y-20', 'opacity-0');
+            send(data) {
+                if (!this.connected) return;
+                
+                // 模拟服务器响应
+                setTimeout(() => {
+                    if (this.callbacks.onmessage) {
+                        // 根据发送的数据类型，模拟不同的响应
+                        const message = JSON.parse(data);
+                        let response;
+                        
+                        if (message.type === "chat") {
+                            response = {
+                                type: "chat",
+                                data: {
+                                    user: "系统",
+                                    message: `已收到你的消息: ${message.data.message}`
+                                }
+                            };
+                        } else if (message.type === "gameAction") {
+                            response = {
+                                type: "gameAction",
+                                data: {
+                                    success: true,
+                                    message: "操作已同步给所有玩家"
+                                }
+                            };
+                        }
+                        
+                        if (response) {
+                            this.callbacks.onmessage({ data: JSON.stringify(response) });
+                        }
+                    }
+                }, 500);
+            }
             
+            close() {
+                this.connected = false;
+                if (this.callbacks.onclose) this.callbacks.onclose();
+            }
+            
+            onopen(callback) {
+                this.callbacks.onopen = callback;
+            }
+            
+            onmessage(callback) {
+                this.callbacks.onmessage = callback;
+            }
+            
+            onclose(callback) {
+                this.callbacks.onclose = callback;
+            }
+            
+            onerror(callback) {
+                this.callbacks.onerror = callback;
+            }
+        }
+
+        // 初始化WebSocket连接
+        let socket;
+        
+        function initWebSocket() {
+            // 实际环境中应替换为真实的WebSocket服务器地址
+            socket = new WebSocketMock('ws://localhost:8080/game');
+            
+            socket.onopen(() => {
+                console.log('WebSocket连接已建立');
+                document.getElementById('connection-status').textContent = '已连接';
+                document.getElementById('connection-status').className = 'text-success';
+                
+                // 连接成功后加入游戏
+                socket.send(JSON.stringify({
+                    type: "join",
+                    data: {
+                        playerId: gameState.players[0].id,
+                        country: gameState.players[0].country
+                    }
+                }));
+            });
+            
+            socket.onmessage(event => {
+                const message = JSON.parse(event.data);
+                handleServerMessage(message);
+            });
+            
+            socket.onclose(() => {
+                console.log('WebSocket连接已关闭');
+                document.getElementById('connection-status').textContent = '已断开';
+                document.getElementById('connection-status').className = 'text-secondary';
+                
+                // 尝试重连
+                setTimeout(initWebSocket, 5000);
+            });
+            
+            socket.onerror(error => {
+                console.error('WebSocket错误:', error);
+                document.getElementById('connection-status').textContent = '错误';
+                document.getElementById('connection-status').className = 'text-warning';
+            });
+        }
+
+        // 处理服务器消息
+        function handleServerMessage(message) {
+            switch (message.type) {
+                case "chat":
+                    addChatMessage(message.data.user, message.data.message, false);
+                    break;
+                case "gameAction":
+                    showNotification(message.data.message);
+                    break;
+                case "playerUpdate":
+                    updatePlayerStatus(message.data);
+                    break;
+                case "event":
+                    showEventNotification(message.data);
+                    break;
+            }
+        }
+
+        // 发送聊天消息
+        function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            
+            if (message && socket.connected) {
+                // 添加到本地聊天界面
+                addChatMessage("我", message, true);
+                
+                // 发送到服务器
+                socket.send(JSON.stringify({
+                    type: "chat",
+                    data: {
+                        message: message,
+                        playerId: gameState.players[0].id
+                    }
+                }));
+                
+                input.value = '';
+            }
+        }
+
+        // 添加聊天消息到界面
+        function addChatMessage(user, message, isOwn) {
+            const chatContainer = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            
+            if (isOwn) {
+                messageDiv.className = 'flex justify-end';
+                messageDiv.innerHTML = `
+                    <div class="mr-2 text-right">
+                        <div class="text-xs font-semibold">${user}</div>
+                        <div class="text-sm bg-accent/80 p-2 rounded max-w-[80%]">
+                            ${message}
+                        </div>
+                    </div>
+                    <img src="https://picsum.photos/id/1005/32/32" alt="${user}头像" class="w-6 h-6 rounded-full">
+                `;
+            } else {
+                messageDiv.className = 'flex';
+                const avatarId = user === "玩家2" ? 1012 : user === "玩家3" ? 1025 : 1074;
+                messageDiv.innerHTML = `
+                    <img src="https://picsum.photos/id/${avatarId}/32/32" alt="${user}头像" class="w-6 h-6 rounded-full">
+                    <div class="ml-2">
+                        <div class="text-xs font-semibold">${user}</div>
+                        <div class="text-sm bg-primary/50 p-2 rounded max-w-[80%]">
+                            ${message}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // 更新游戏日期
+        function updateDate() {
+            if (gameState.isPaused) return;
+            
+            // 根据游戏速度调整日期增量
+            const daysToAdd = gameState.speed;
+            
+            gameState.date.day += daysToAdd;
+            
+            // 处理月份变更
+            const daysInMonth = new Date(gameState.date.year, gameState.date.month, 0).getDate();
+            if (gameState.date.day > daysInMonth) {
+                gameState.date.day -= daysInMonth;
+                gameState.date.month += 1;
+                
+                // 处理年份变更
+                if (gameState.date.month > 12) {
+                    gameState.date.month = 1;
+                    gameState.date.year += 1;
+                    
+                    // 每年触发一次事件
+                    if (Math.random() > 0.3) {
+                        triggerRandomEvent();
+                    }
+                }
+            }
+            
+            // 更新显示
+            document.getElementById('game-date').textContent = 
+                `${gameState.date.year}年${gameState.date.month}月${gameState.date.day}日`;
+        }
+
+        // 切换游戏暂停状态
+        function togglePause() {
+            gameState.isPaused = !gameState.isPaused;
+            const pauseBtn = document.getElementById('pause-btn');
+            const playPauseBtn = document.getElementById('play-pause');
+            
+            if (gameState.isPaused) {
+                pauseBtn.innerHTML = '<i class="fa fa-play mr-1"></i>继续';
+                playPauseBtn.innerHTML = '<i class="fa fa-play mr-1"></i>已暂停';
+            } else {
+                pauseBtn.innerHTML = '<i class="fa fa-pause mr-1"></i>暂停';
+                updateSpeedDisplay();
+            }
+        }
+
+        // 调整游戏速度
+        function changeSpeed(direction) {
+            gameState.speed = Math.max(1, Math.min(3, gameState.speed + direction));
+            updateSpeedDisplay();
+        }
+
+        // 更新速度显示
+        function updateSpeedDisplay() {
+            const playPauseBtn = document.getElementById('play-pause');
+            let speedText = "正常速度";
+            
+            if (gameState.speed === 2) speedText = "快速";
+            if (gameState.speed === 3) speedText = "超快速";
+            
+            playPauseBtn.innerHTML = `<i class="fa fa-play mr-1"></i>${speedText}`;
+        }
+
+        // 地图缩放控制
+        function zoomMap(direction) {
+            gameState.zoomLevel = Math.max(0.5, Math.min(2, gameState.zoomLevel + direction * 0.1));
+            document.getElementById('map-container').style.transform = `scale(${gameState.zoomLevel})`;
+        }
+
+        // 重置地图视图
+        function resetMapView() {
+            gameState.zoomLevel = 1;
+            document.getElementById('map-container').style.transform = `scale(1)`;
+        }
+
+        // 显示玩家面板
+        function showPlayersPanel() {
+            document.getElementById('players-panel').classList.remove('hidden');
+        }
+
+        // 隐藏玩家面板
+        function hidePlayersPanel() {
+            document.getElementById('players-panel').classList.add('hidden');
+        }
+
+        // 更新玩家状态
+        function updatePlayerStatus(playerData) {
+            const player = gameState.players.find(p => p.id === playerData.id);
+            if (player) {
+                player.ready = playerData.ready;
+                player.online = playerData.online;
+                
+                // 更新UI...
+                updateStartButtonStatus();
+            }
+        }
+
+        // 更新开始按钮状态
+        function updateStartButtonStatus() {
+            const allReady = gameState.players.every(p => !p.online || p.ready);
+            const startBtn = document.getElementById('start-game');
+            
+            if (allReady) {
+                startBtn.textContent = "开始游戏";
+                startBtn.disabled = false;
+                startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                const notReady = gameState.players.filter(p => p.online && !p.ready).map(p => p.name).join(', ');
+                startBtn.textContent = `开始游戏 (等待${notReady}准备)`;
+                startBtn.disabled = true;
+                startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        // 显示事件通知
+        function showEventNotification(eventData) {
+            const eventPanel = document.getElementById('event-notification');
+            eventPanel.querySelector('p').textContent = eventData.message;
+            eventPanel.classList.remove('hidden');
+            
+            // 自动隐藏
             setTimeout(() => {
-                notification.classList.add('translate-y-20', 'opacity-0');
-            }, 3000);
+                eventPanel.classList.add('hidden');
+            }, 10000);
         }
-        
-        // 导航栏滚动效果
-        const navbar = document.getElementById('navbar');
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) {
-                navbar.classList.add('py-2', 'shadow-lg');
-                navbar.classList.remove('py-3', 'shadow-md');
-            } else {
-                navbar.classList.add('py-3', 'shadow-md');
-                navbar.classList.remove('py-2', 'shadow-lg');
-            }
-        });
-        
-        // 移动端菜单切换
-        const menuToggle = document.getElementById('menu-toggle');
-        const mobileMenu = document.getElementById('mobile-menu');
-        
-        menuToggle.addEventListener('click', () => {
-            mobileMenu.classList.toggle('hidden');
-        });
-        
-        // 平滑滚动
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function(e) {
-                e.preventDefault();
-                const targetId = this.getAttribute('href');
-                const targetElement = document.querySelector(targetId);
-                
-                if (targetElement) {
-                    window.scrollTo({
-                        top: targetElement.offsetTop - 80,
-                        behavior: 'smooth'
-                    });
-                    
-                    // 关闭移动菜单（如果打开）
-                    if (!mobileMenu.classList.contains('hidden')) {
-                        mobileMenu.classList.add('hidden');
-                    }
-                }
-            });
-        });
-        
-        // 计算器功能
-        const calcDisplay = document.getElementById('calc-display');
-        let currentValue = '0';
-        let previousValue = null;
-        let operator = null;
-        let resetOnNextInput = false;
-        
-        document.querySelectorAll('.calc-btn').forEach(button => {
-            button.addEventListener('click', () => {
-                const value = button.getAttribute('data-value');
-                
-                // 数字和小数点
-                if (/[0-9.]/.test(value)) {
-                    handleNumberInput(value);
-                } 
-                // 运算符
-                else if (/[+*/-]/.test(value)) {
-                    handleOperator(value);
-                } 
-                // 等于
-                else if (value === '=') {
-                    calculateResult();
-                    // 计算完成后添加积分
-                    if (userSystem.currentUser) {
-                        userSystem.addPoints(1);
-                        showPointsNotification(1);
-                    }
-                } 
-                // 清除
-                else if (value === 'C') {
-                    clearCalculator();
-                } 
-                // 退格
-                else if (value === '←') {
-                    backspace();
-                } 
-                // 百分比
-                else if (value === '%') {
-                    calculatePercentage();
-                } 
-                // 正负号
-                else if (value === '±') {
-                    toggleSign();
-                }
-                
-                updateDisplay();
-            });
-        });
-        
-        function handleNumberInput(value) {
-            if (resetOnNextInput) {
-                currentValue = '0';
-                resetOnNextInput = false;
-            }
-            
-            // 处理小数点
-            if (value === '.') {
-                if (!currentValue.includes('.')) {
-                    currentValue += '.';
-                }
-                return;
-            }
-            
-            // 处理数字
-            if (currentValue === '0') {
-                currentValue = value;
-            } else {
-                currentValue += value;
-            }
-        }
-        
-        function handleOperator(op) {
-            if (previousValue === null) {
-                previousValue = currentValue;
-            } else if (operator) {
-                calculateResult();
-                previousValue = currentValue;
-            }
-            
-            operator = op;
-            resetOnNextInput = true;
-        }
-        
-        function calculateResult() {
-            if (!operator || previousValue === null) return;
-            
-            const prev = parseFloat(previousValue);
-            const curr = parseFloat(currentValue);
-            let result;
-            
-            switch (operator) {
-                case '+':
-                    result = prev + curr;
-                    break;
-                case '-':
-                    result = prev - curr;
-                    break;
-                case '*':
-                    result = prev * curr;
-                    break;
-                case '/':
-                    result = prev / curr;
-                    break;
-                default:
-                    return;
-            }
-            
-            currentValue = result.toString();
-            operator = null;
-            previousValue = null;
-            resetOnNextInput = true;
-        }
-        
-        function clearCalculator() {
-            currentValue = '0';
-            previousValue = null;
-            operator = null;
-            resetOnNextInput = false;
-        }
-        
-        function backspace() {
-            if (currentValue.length > 1) {
-                currentValue = currentValue.slice(0, -1);
-            } else {
-                currentValue = '0';
-            }
-        }
-        
-        function calculatePercentage() {
-            currentValue = (parseFloat(currentValue) / 100).toString();
-        }
-        
-        function toggleSign() {
-            currentValue = (parseFloat(currentValue) * -1).toString();
-        }
-        
-        function updateDisplay() {
-            // 限制显示长度
-            if (currentValue.length > 12) {
-                const num = parseFloat(currentValue);
-                currentValue = num.toExponential(6);
-            }
-            
-            calcDisplay.textContent = currentValue;
-        }
-        
-        // BMI计算器
-        const calculateBmiBtn = document.getElementById('calculate-bmi');
-        const bmiResult = document.getElementById('bmi-result');
-        const bmiValue = document.getElementById('bmi-value');
-        const bmiCategory = document.getElementById('bmi-category');
-        let bmiChart = null;
-        
-        calculateBmiBtn.addEventListener('click', () => {
-            const height = parseFloat(document.getElementById('bmi-height').value) / 100; // 转换为米
-            const weight = parseFloat(document.getElementById('bmi-weight').value);
-            
-            if (isNaN(height) || isNaN(weight) || height <= 0 || weight <= 0) {
-                alert('请输入有效的身高和体重');
-                return;
-            }
-            
-            const bmi = weight / (height * height);
-            let category = '';
-            let color = '';
-            
-            if (bmi < 18.5) {
-                category = '偏瘦';
-                color = 'blue';
-            } else if (bmi < 24) {
-                category = '正常';
-                color = 'green';
-            } else if (bmi < 28) {
-                category = '超重';
-                color = 'orange';
-            } else {
-                category = '肥胖';
-                color = 'red';
-            }
-            
-            bmiValue.textContent = bmi.toFixed(1);
-            bmiCategory.textContent = category;
-            bmiResult.classList.remove('hidden');
-            
-            // 计算BMI后添加积分
-            if (userSystem.currentUser) {
-                const points = parseInt(calculateBmiBtn.getAttribute('data-points'));
-                userSystem.addPoints(points);
-                showPointsNotification(points);
-            }
-            
-            // 绘制BMI图表
-            const ctx = document.getElementById('bmi-chart').getContext('2d');
-            
-            // 如果已有图表，先销毁
-            if (bmiChart) {
-                bmiChart.destroy();
-            }
-            
-            bmiChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['偏瘦', '正常', '超重', '肥胖'],
-                    datasets: [{
-                        label: 'BMI范围',
-                        data: [18.5, 18.5, 24, 28],
-                        borderColor: 'gray',
-                        backgroundColor: 'rgba(128, 128, 128, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }, {
-                        label: '您的BMI',
-                        data: [bmi, bmi, bmi, bmi],
-                        borderColor: color === 'blue' ? '#3B82F6' : 
-                                   color === 'green' ? '#10B981' : 
-                                   color === 'orange' ? '#F59E0B' : '#EF4444',
-                        backgroundColor: 'transparent',
-                        borderWidth: 3,
-                        pointRadius: 6,
-                        pointBackgroundColor: color === 'blue' ? '#3B82F6' : 
-                                           color === 'green' ? '#10B981' : 
-                                           color === 'orange' ? '#F59E0B' : '#EF4444',
-                        tension: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        }
-                    },
-                    scales: {
-                        y: {
-                            min: 10,
-                            max: 40,
-                            ticks: {
-                                stepSize: 5
-                            }
-                        }
-                    }
-                }
-            });
-        });
-        
-        // 工具和游戏模态框
-        const toolModal = document.getElementById('tool-modal');
-        const modalTitle = document.getElementById('modal-title');
-        const modalContent = document.getElementById('modal-content');
-        const closeModal = document.getElementById('close-modal');
-        
-        // 当前打开的工具/游戏ID和类型
-        let currentItemId = '';
-        let currentItemType = '';
-        let currentItemPoints = 0;
-        
-        // 打开模态框
-        document.querySelectorAll('.tool-btn, .game-btn').forEach(button => {
-            button.addEventListener('click', () => {
-                // 检查是否登录
-                if (!userSystem.currentUser) {
-                    // 未登录，显示登录模态框
-                    openLoginModal();
-                    return;
-                }
-                
-                const type = button.classList.contains('tool-btn') ? '工具' : '游戏';
-                const name = button.closest('.card-hover, .bg-white').querySelector('h3').textContent;
-                const id = button.getAttribute('data-tool') || button.getAttribute('data-game');
-                const points = parseInt(button.getAttribute('data-points'));
-                
-                currentItemId = id;
-                currentItemType = type;
-                currentItemPoints = points;
-                
-                modalTitle.textContent = `${name}${type}`;
-                loadModalContent(id, type);
-                
-                toolModal.classList.remove('hidden');
-                document.body.style.overflow = 'hidden'; // 防止背景滚动
-            });
-        });
-        
-        // 关闭模态框时添加积分
-        closeModal.addEventListener('click', () => {
-            toolModal.classList.add('hidden');
-            document.body.style.overflow = ''; // 恢复背景滚动
-            
-            // 给已登录用户添加积分
-            if (userSystem.currentUser && currentItemId) {
-                userSystem.addPoints(currentItemPoints);
-                showPointsNotification(currentItemPoints);
-                
-                // 重置当前项目信息
-                currentItemId = '';
-                currentItemType = '';
-                currentItemPoints = 0;
-            }
-        });
-        
-        // 点击模态框外部关闭
-        toolModal.addEventListener('click', (e) => {
-            if (e.target === toolModal) {
-                toolModal.classList.add('hidden');
-                document.body.style.overflow = '';
-                
-                // 给已登录用户添加积分
-                if (userSystem.currentUser && currentItemId) {
-                    userSystem.addPoints(currentItemPoints);
-                    showPointsNotification(currentItemPoints);
-                    
-                    // 重置当前项目信息
-                    currentItemId = '';
-                    currentItemType = '';
-                    currentItemPoints = 0;
-                }
-            }
-        });
-        
-        // 加载模态框内容
-        function loadModalContent(id, type) {
-            // 根据工具/游戏ID加载不同内容
-            switch(id) {
-                case 'text-tools':
-                    loadTextTools();
-                    break;
-                case 'password-generator':
-                    loadPasswordGenerator();
-                    break;
-                case 'color-picker':
-                    loadColorPicker();
-                    break;
-                case 'snake':
-                    loadSnakeGame();
-                    break;
-                case 'memory':
-                    loadMemoryGame();
-                    break;
-                case 'breakout':
-                    loadBreakoutGame();
-                    break;
-                default:
-                    modalContent.innerHTML = `
-                        <div class="text-center py-12">
-                            <i class="fa fa-cog text-gray-300 text-5xl mb-4"></i>
-                            <p class="text-gray-500">${modalTitle.textContent} 正在开发中，敬请期待！</p>
-                        </div>
-                    `;
-            }
-        }
-        
-        // 文本工具
-        function loadTextTools() {
-            modalContent.innerHTML = `
-                <div class="space-y-6">
-                    <div>
-                        <label class="block text-gray-700 mb-2 font-medium">输入文本</label>
-                        <textarea id="text-input" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary h-32" placeholder="在这里输入或粘贴文本..."></textarea>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <button id="uppercase-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded transition-colors">
-                            <i class="fa fa-arrow-up mr-1"></i> 全部大写
-                        </button>
-                        <button id="lowercase-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded transition-colors">
-                            <i class="fa fa-arrow-down mr-1"></i> 全部小写
-                        </button>
-                        <button id="capitalize-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded transition-colors">
-                            <i class="fa fa-font mr-1"></i> 首字母大写
-                        </button>
-                        <button id="reverse-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded transition-colors">
-                            <i class="fa fa-exchange mr-1"></i> 反转文本
-                        </button>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-gray-700 mb-2 font-medium">文本统计</label>
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div>
-                                    <p class="text-sm text-gray-500">字符数</p>
-                                    <p class="text-xl font-semibold" id="char-count">0</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-gray-500">单词数</p>
-                                    <p class="text-xl font-semibold" id="word-count">0</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-gray-500">句子数</p>
-                                    <p class="text-xl font-semibold" id="sentence-count">0</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-gray-500">段落数</p>
-                                    <p class="text-xl font-semibold" id="paragraph-count">0</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // 获取元素
-            const textInput = document.getElementById('text-input');
-            const uppercaseBtn = document.getElementById('uppercase-btn');
-            const lowercaseBtn = document.getElementById('lowercase-btn');
-            const capitalizeBtn = document.getElementById('capitalize-btn');
-            const reverseBtn = document.getElementById('reverse-btn');
-            const charCount = document.getElementById('char-count');
-            const wordCount = document.getElementById('word-count');
-            const sentenceCount = document.getElementById('sentence-count');
-            const paragraphCount = document.getElementById('paragraph-count');
-            
-            // 更新统计信息
-            function updateStats() {
-                const text = textInput.value;
-                
-                // 字符数
-                charCount.textContent = text.length;
-                
-                // 单词数 (简单处理)
-                const words = text.trim().split(/\s+/).filter(word => word.length > 0);
-                wordCount.textContent = words.length;
-                
-                // 句子数 (简单处理)
-                const sentences = text.split(/[.!?]+/).filter(sentence => sentence.trim().length > 0);
-                sentenceCount.textContent = sentences.length;
-                
-                // 段落数 (简单处理)
-                const paragraphs = text.split(/\n+/).filter(paragraph => paragraph.trim().length > 0);
-                paragraphCount.textContent = paragraphs.length;
-            }
-            
-            // 事件监听
-            textInput.addEventListener('input', updateStats);
-            
-            uppercaseBtn.addEventListener('click', () => {
-                textInput.value = textInput.value.toUpperCase();
-                updateStats();
-            });
-            
-            lowercaseBtn.addEventListener('click', () => {
-                textInput.value = textInput.value.toLowerCase();
-                updateStats();
-            });
-            
-            capitalizeBtn.addEventListener('click', () => {
-                textInput.value = textInput.value.toLowerCase().replace(/(?:^|\s)\S/g, function(a) {
-                    return a.toUpperCase();
-                });
-                updateStats();
-            });
-            
-            reverseBtn.addEventListener('click', () => {
-                textInput.value = textInput.value.split('').reverse().join('');
-                updateStats();
-            });
-        }
-        
-        // 密码生成器
-        function loadPasswordGenerator() {
-            modalContent.innerHTML = `
-                <div class="space-y-6">
-                    <div>
-                        <label class="block text-gray-700 mb-2 font-medium">生成的密码</label>
-                        <div class="flex">
-                            <input id="generated-password" type="text" class="flex-grow px-4 py-3 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-primary focus:border-primary" readonly>
-                            <button id="copy-password" class="bg-primary hover:bg-primary/90 text-white px-4 rounded-r-lg transition-colors">
-                                <i class="fa fa-copy"></i>
-                            </button>
-                        </div>
-                        <p id="copy-message" class="text-green-600 mt-1 hidden">密码已复制到剪贴板！</p>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-gray-700 mb-2 font-medium">密码长度</label>
-                        <input id="password-length" type="range" min="8" max="32" value="16" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
-                        <div class="flex justify-between text-sm text-gray-500 mt-1">
-                            <span>8</span>
-                            <span id="length-value">16</span>
-                            <span>32</span>
-                        </div>
-                    </div>
-                    
-                    <div class="space-y-3">
-                        <label class="block text-gray-700 mb-2 font-medium">密码选项</label>
-                        <div class="flex items-center">
-                            <input id="include-uppercase" type="checkbox" checked class="w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded">
-                            <label for="include-uppercase" class="ml-2 text-gray-700">包含大写字母 (A-Z)</label>
-                        </div>
-                        <div class="flex items-center">
-                            <input id="include-lowercase" type="checkbox" checked class="w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded">
-                            <label for="include-lowercase" class="ml-2 text-gray-700">包含小写字母 (a-z)</label>
-                        </div>
-                        <div class="flex items-center">
-                            <input id="include-numbers" type="checkbox" checked class="w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded">
-                            <label for="include-numbers" class="ml-2 text-gray-700">包含数字 (0-9)</label>
-                        </div>
-                        <div class="flex items-center">
-                            <input id="include-symbols" type="checkbox" checked class="w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded">
-                            <label for="include-symbols" class="ml-2 text-gray-700">包含特殊符号 (!@#$%^&*)</label>
-                        </div>
-                    </div>
-                    
-                    <button id="generate-password" class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 rounded-lg transition-colors">
-                        生成新密码
-                    </button>
-                    
-                    <div class="bg-blue-50 border-l-4 border-primary p-4 rounded">
-                        <h4 class="font-medium text-primary">密码强度提示</h4>
-                        <p class="text-sm text-blue-700 mt-1">使用较长的密码（至少12个字符）并混合使用不同类型的字符可以提高安全性。</p>
-                    </div>
-                </div>
-            `;
-            
-            // 获取元素
-            const generatedPassword = document.getElementById('generated-password');
-            const copyPassword = document.getElementById('copy-password');
-            const copyMessage = document.getElementById('copy-message');
-            const passwordLength = document.getElementById('password-length');
-            const lengthValue = document.getElementById('length-value');
-            const includeUppercase = document.getElementById('include-uppercase');
-            const includeLowercase = document.getElementById('include-lowercase');
-            const includeNumbers = document.getElementById('include-numbers');
-            const includeSymbols = document.getElementById('include-symbols');
-            const generatePasswordBtn = document.getElementById('generate-password');
-            
-            // 更新长度显示
-            passwordLength.addEventListener('input', () => {
-                lengthValue.textContent = passwordLength.value;
-            });
-            
-            // 生成密码函数
-            function generatePassword() {
-                const length = parseInt(passwordLength.value);
-                let charset = '';
-                let password = '';
-                
-                if (includeUppercase.checked) charset += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-                if (includeLowercase.checked) charset += 'abcdefghijklmnopqrstuvwxyz';
-                if (includeNumbers.checked) charset += '0123456789';
-                if (includeSymbols.checked) charset += '!@#$%^&*()_+~`|}{[]:;?><,./-=';
-                
-                // 确保至少选择了一个选项
-                if (charset === '') {
-                    alert('请至少选择一种字符类型');
-                    return;
-                }
-                
-                // 生成密码
-                for (let i = 0; i < length; i++) {
-                    const randomIndex = Math.floor(Math.random() * charset.length);
-                    password += charset[randomIndex];
-                }
-                
-                generatedPassword.value = password;
-            }
-            
-            // 复制密码
-            copyPassword.addEventListener('click', () => {
-                if (generatedPassword.value) {
-                    generatedPassword.select();
-                    document.execCommand('copy');
-                    copyMessage.classList.remove('hidden');
-                    
-                    setTimeout(() => {
-                        copyMessage.classList.add('hidden');
-                    }, 2000);
-                }
-            });
-            
-            // 生成密码按钮
-            generatePasswordBtn.addEventListener('click', generatePassword);
-            
-            // 初始生成一个密码
-            generatePassword();
-        }
-        
-        // 颜色选择器
-        function loadColorPicker() {
-            modalContent.innerHTML = `
-                <div class="space-y-8">
-                    <div class="flex flex-col md:flex-row gap-6">
-                        <div class="md:w-1/3">
-                            <label class="block text-gray-700 mb-2 font-medium">选择颜色</label>
-                            <div class="bg-gray-100 p-4 rounded-lg flex flex-col items-center">
-                                <div id="color-preview" class="w-32 h-32 rounded-lg mb-4" style="background-color: #3B82F6;"></div>
-                                <input id="color-input" type="color" value="#3B82F6" class="w-20 h-10 cursor-pointer">
-                            </div>
-                        </div>
-                        
-                        <div class="md:w-2/3">
-                            <label class="block text-gray-700 mb-2 font-medium">颜色值</label>
-                            <div class="space-y-3">
-                                <div>
-                                    <label class="block text-sm text-gray-500 mb-1">HEX</label>
-                                    <div class="flex">
-                                        <input id="hex-value" type="text" value="#3B82F6" class="flex-grow px-4 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-primary focus:border-primary">
-                                        <button class="copy-color bg-gray-100 hover:bg-gray-200 px-3 rounded-r-lg transition-colors" data-target="hex-value">
-                                            <i class="fa fa-copy"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-sm text-gray-500 mb-1">RGB</label>
-                                    <div class="flex">
-                                        <input id="rgb-value" type="text" value="rgb(59, 130, 246)" class="flex-grow px-4 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-primary focus:border-primary">
-                                        <button class="copy-color bg-gray-100 hover:bg-gray-200 px-3 rounded-r-lg transition-colors" data-target="rgb-value">
-                                            <i class="fa fa-copy"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-sm text-gray-500 mb-1">HSL</label>
-                                    <div class="flex">
-                                        <input id="hsl-value" type="text" value="hsl(217, 90%, 58%)" class="flex-grow px-4 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-primary focus:border-primary">
-                                        <button class="copy-color bg-gray-100 hover:bg-gray-200 px-3 rounded-r-lg transition-colors" data-target="hsl-value">
-                                            <i class="fa fa-copy"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-gray-700 mb-4 font-medium">相似颜色</label>
-                        <div id="similar-colors" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                            <!-- 相似颜色将通过JS生成 -->
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-gray-700 mb-4 font-medium">对比度预览</label>
-                        <div class="space-y-3">
-                            <div id="light-contrast" class="p-4 rounded-lg" style="background-color: #3B82F6; color: white;">
-                                白色文本在当前颜色上的对比度
-                            </div>
-                            <div id="dark-contrast" class="p-4 rounded-lg border border-gray-300" style="background-color: white; color: #3B82F6;">
-                                当前颜色文本在白色背景上的对比度
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // 获取元素
-            const colorInput = document.getElementById('color-input');
-            const colorPreview = document.getElementById('color-preview');
-            const hexValue = document.getElementById('hex-value');
-            const rgbValue = document.getElementById('rgb-value');
-            const hslValue = document.getElementById('hsl-value');
-            const similarColors = document.getElementById('similar-colors');
-            const lightContrast = document.getElementById('light-contrast');
-            const darkContrast = document.getElementById('dark-contrast');
-            const copyButtons = document.querySelectorAll('.copy-color');
-            
-            // 复制颜色值
-            copyButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const targetId = button.getAttribute('data-target');
-                    const input = document.getElementById(targetId);
-                    
-                    input.select();
-                    document.execCommand('copy');
-                    
-                    // 显示复制成功提示
-                    const originalText = button.innerHTML;
-                    button.innerHTML = '<i class="fa fa-check"></i>';
-                    
-                    setTimeout(() => {
-                        button.innerHTML = originalText;
-                    }, 2000);
-                });
-            });
-            
-            // HEX转RGB
-            function hexToRgb(hex) {
-                // 移除#号
-                hex = hex.replace('#', '');
-                
-                // 解析RGB值
-                const r = parseInt(hex.substring(0, 2), 16);
-                const g = parseInt(hex.substring(2, 4), 16);
-                const b = parseInt(hex.substring(4, 6), 16);
-                
-                return { r, g, b };
-            }
-            
-            // RGB转HSL
-            function rgbToHsl(r, g, b) {
-                r /= 255;
-                g /= 255;
-                b /= 255;
-                
-                const max = Math.max(r, g, b);
-                const min = Math.min(r, g, b);
-                let h, s, l = (max + min) / 2;
-                
-                if (max === min) {
-                    h = s = 0; // 灰色
-                } else {
-                    const d = max - min;
-                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-                    
-                    switch (max) {
-                        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                        case g: h = (b - r) / d + 2; break;
-                        case b: h = (r - g) / d + 4; break;
-                    }
-                    
-                    h /= 6;
-                }
-                
-                return { 
-                    h: Math.round(h * 360), 
-                    s: Math.round(s * 100), 
-                    l: Math.round(l * 100) 
-                };
-            }
-            
-            // 更新颜色信息
-            function updateColorInfo(hex) {
-                // 更新预览
-                colorPreview.style.backgroundColor = hex;
-                lightContrast.style.backgroundColor = hex;
-                darkContrast.style.color = hex;
-                
-                // 更新HEX值
-                hexValue.value = hex;
-                
-                // 计算并更新RGB值
-                const rgb = hexToRgb(hex);
-                rgbValue.value = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
-                
-                // 计算并更新HSL值
-                const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-                hslValue.value = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
-                
-                // 生成相似颜色
-                generateSimilarColors(hsl);
-            }
-            
-            // 生成相似颜色
-            function generateSimilarColors(hsl) {
-                similarColors.innerHTML = '';
-                
-                // 生成5种相似颜色（调整饱和度和亮度）
-                for (let i = 0; i < 6; i++) {
-                    const newS = Math.max(0, Math.min(100, hsl.s + (i - 2) * 10));
-                    const newL = Math.max(0, Math.min(100, hsl.l + (i - 2) * 10));
-                    
-                    const colorDiv = document.createElement('div');
-                    colorDiv.className = 'h-20 rounded-lg cursor-pointer hover:ring-2 hover:ring-offset-2 hover:ring-gray-400 transition-all';
-                    colorDiv.style.backgroundColor = `hsl(${hsl.h}, ${newS}%, ${newL}%)`;
-                    
-                    // 点击相似颜色时选中它
-                    colorDiv.addEventListener('click', () => {
-                        const hex = rgbToHex(hslToRgb(hsl.h, newS, newL));
-                        colorInput.value = hex;
-                        updateColorInfo(hex);
-                    });
-                    
-                    similarColors.appendChild(colorDiv);
-                }
-            }
-            
-            // HSL转RGB（辅助函数）
-            function hslToRgb(h, s, l) {
-                h /= 360;
-                s /= 100;
-                l /= 100;
-                
-                let r, g, b;
-                
-                if (s === 0) {
-                    r = g = b = l; // 灰色
-                } else {
-                    const hue2rgb = (p, q, t) => {
-                        if (t < 0) t += 1;
-                        if (t > 1) t -= 1;
-                        if (t < 1/6) return p + (q - p) * 6 * t;
-                        if (t < 1/2) return q;
-                        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-                        return p;
-                    };
-                    
-                    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-                    const p = 2 * l - q;
-                    
-                    r = hue2rgb(p, q, h + 1/3);
-                    g = hue2rgb(p, q, h);
-                    b = hue2rgb(p, q, h - 1/3);
-                }
-                
-                return {
-                    r: Math.round(r * 255),
-                    g: Math.round(g * 255),
-                    b: Math.round(b * 255)
-                };
-            }
-            
-            // RGB转HEX（辅助函数）
-            function rgbToHex(rgb) {
-                const toHex = (x) => {
-                    const hex = x.toString(16);
-                    return hex.length === 1 ? '0' + hex : hex;
-                };
-                
-                return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
-            }
-            
-            // 事件监听
-            colorInput.addEventListener('input', () => {
-                updateColorInfo(colorInput.value);
-            });
-            
-            // 初始更新
-            updateColorInfo(colorInput.value);
-        }
-        
-        // 贪吃蛇游戏
-        function loadSnakeGame() {
-            modalContent.innerHTML = `
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <span class="text-gray-700 font-medium">分数: </span>
-                            <span id="snake-score" class="text-xl font-bold text-primary">0</span>
-                        </div>
-                        <button id="snake-restart" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors">
-                            <i class="fa fa-refresh mr-1"></i> 重新开始
-                        </button>
-                    </div>
-                    
-                    <div class="relative border-2 border-gray-300 rounded-lg overflow-hidden">
-                        <canvas id="snake-canvas" width="600" height="400" class="w-full"></canvas>
-                        <div id="snake-game-over" class="absolute inset-0 bg-black/70 hidden flex flex-col items-center justify-center text-white">
-                            <h3 class="text-2xl font-bold mb-2">游戏结束</h3>
-                            <p class="mb-4">您的分数: <span id="final-score">0</span></p>
-                            <button id="play-again" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors">
-                                再玩一次
-                            </button>
-                        </div>
-                        <div id="snake-instructions" class="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-white">
-                            <h3 class="text-2xl font-bold mb-4">贪吃蛇游戏</h3>
-                            <p class="mb-2">使用方向键控制蛇移动</p>
-                            <p class="mb-6">吃到食物得分，撞到墙壁或自己游戏结束</p>
-                            <button id="start-snake" class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg transition-colors">
-                                开始游戏
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <h4 class="font-medium text-gray-800 mb-2">游戏说明</h4>
-                        <ul class="text-sm text-gray-600 space-y-1">
-                            <li>• 使用方向键 ↑ ↓ ← → 控制蛇的移动方向</li>
-                            <li>• 蛇吃到食物后会变长，同时获得分数</li>
-                            <li>• 撞到墙壁或自己的身体会导致游戏结束</li>
-                            <li>• 游戏速度会随着分数增加而加快</li>
-                        </ul>
-                    </div>
-                </div>
-            `;
-            
-            // 游戏变量
-            let canvas, ctx;
-            let snake = [];
-            let food = {};
-            let direction = '';
-            let nextDirection = '';
-            let score = 0;
-            let gameInterval;
-            let gameSpeed = 150; // 初始速度（毫秒）
-            let gameRunning = false;
-            
-            // 获取元素
-            const snakeCanvas = document.getElementById('snake-canvas');
-            const snakeScore = document.getElementById('snake-score');
-            const snakeRestart = document.getElementById('snake-restart');
-            const snakeGameOver = document.getElementById('snake-game-over');
-            const finalScore = document.getElementById('final-score');
-            const playAgain = document.getElementById('play-again');
-            const snakeInstructions = document.getElementById('snake-instructions');
-            const startSnake = document.getElementById('start-snake');
-            
-            // 初始化游戏
-            function initGame() {
-                canvas = snakeCanvas;
-                ctx = canvas.getContext('2d');
-                
-                // 设置蛇的初始位置
-                snake = [
-                    { x: 10, y: 10 },
-                    { x: 9, y: 10 },
-                    { x: 8, y: 10 }
-                ];
-                
-                direction = 'right';
-                nextDirection = 'right';
-                score = 0;
-                snakeScore.textContent = score;
-                
-                // 生成初始食物
-                generateFood();
-                
-                // 清除游戏间隔
-                if (gameInterval) clearInterval(gameInterval);
-                
-                // 隐藏游戏结束界面
-                snakeGameOver.classList.add('hidden');
-            }
-            
-            // 生成食物
-            function generateFood() {
-                const maxX = Math.floor(canvas.width / 20) - 1;
-                const maxY = Math.floor(canvas.height / 20) - 1;
-                
-                // 确保食物不会出现在蛇身上
-                let onSnake;
-                do {
-                    onSnake = false;
-                    food = {
-                        x: Math.floor(Math.random() * maxX),
-                        y: Math.floor(Math.random() * maxY)
-                    };
-                    
-                    // 检查食物是否在蛇身上
-                    for (let segment of snake) {
-                        if (segment.x === food.x && segment.y === food.y) {
-                            onSnake = true;
-                            break;
-                        }
-                    }
-                } while (onSnake);
-            }
-            
-            // 绘制游戏
-            function draw() {
-                // 清空画布
-                ctx.fillStyle = '#f8fafc';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                // 绘制网格线（可选）
-                ctx.strokeStyle = '#e2e8f0';
-                ctx.lineWidth = 0.5;
-                
-                for (let x = 0; x < canvas.width; x += 20) {
-                    ctx.beginPath();
-                    ctx.moveTo(x, 0);
-                    ctx.lineTo(x, canvas.height);
-                    ctx.stroke();
-                }
-                
-                for (let y = 0; y < canvas.height; y += 20) {
-                    ctx.beginPath();
-                    ctx.moveTo(0, y);
-                    ctx.lineTo(canvas.width, y);
-                    ctx.stroke();
-                }
-                
-                // 绘制蛇
-                snake.forEach((segment, index) => {
-                    // 蛇头
-                    if (index === 0) {
-                        ctx.fillStyle = '#10B981'; // 绿色
-                    } else {
-                        ctx.fillStyle = '#10B98180'; // 半透明绿色
-                    }
-                    
-                    ctx.fillRect(segment.x * 20, segment.y * 20, 20, 20);
-                    
-                    // 边框
-                    ctx.strokeStyle = '#059669';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(segment.x * 20, segment.y * 20, 20, 20);
-                });
-                
-                // 绘制食物
-                ctx.fillStyle = '#EF4444'; // 红色
-                ctx.beginPath();
-                ctx.arc(
-                    food.x * 20 + 10, 
-                    food.y * 20 + 10, 
-                    8, 
-                    0, 
-                    Math.PI * 2
-                );
-                ctx.fill();
-            }
-            
-            // 更新游戏状态
-            function update() {
-            function update() {
-                // 更新方向
-                direction = nextDirection;
-                
-                // 获取蛇头位置
-                const head = { x: snake[0].x, y: snake[0].y };
-                
-                // 根据方向移动蛇头
-                switch (direction) {
-                    case 'up':
-                        head.y--;
-                        break;
-                    case 'down':
-                        head.y++;
-                        break;
-                    case 'left':
-                        head.x--;
-                        break;
-                    case 'right':
-                        head.x++;
-                        break;
-                }
-                
-                // 检查碰撞
-                // 墙壁碰撞
-                if (
-                    head.x < 0 || 
-                    head.x >= canvas.width / 20 || 
-                    head.y < 0 || 
-                    head.y >= canvas.height / 20
-                ) {
-                    gameOver();
-                    return;
-                }
-                
-                // 自身碰撞
-                for (let i = 0; i < snake.length; i++) {
-                    if (snake[i].x === head.x && snake[i].y === head.y) {
-                        gameOver();
-                        return;
-                    }
-                }
-                
-                // 将新头部添加到蛇
-                snake.unshift(head);
-                
-                // 检查是否吃到食物
-                if (head.x === food.x && head.y === food.y) {
-                    // 加分
-                    score += 10;
-                    snakeScore.textContent = score;
-                    
-                    // 生成新食物
-                    generateFood();
-                    
-                    // 每得50分增加速度
-                    if (score % 50 === 0 && gameSpeed > 50) {
-                        gameSpeed -= 10;
-                        clearInterval(gameInterval);
-                        gameInterval = setInterval(gameLoop, gameSpeed);
-                    }
-                } else {
-                    // 如果没吃到食物，移除尾部
-                    snake.pop();
-                }
-                
-                // 绘制游戏
-                draw();
-            }
-            
-            // 游戏主循环
-            function gameLoop() {
-                update();
-            }
-            
-            // 游戏结束
-            function gameOver() {
-                gameRunning = false;
-                clearInterval(gameInterval);
-                finalScore.textContent = score;
-                snakeGameOver.classList.remove('hidden');
-                
-                // 游戏结束时额外奖励积分
-                if (userSystem.currentUser && score > 0) {
-                    const bonusPoints = Math.floor(score / 10);
-                    userSystem.addPoints(bonusPoints);
-                    showPointsNotification(bonusPoints);
-                }
-            }
-            
-            // 开始游戏
-            function startGame() {
-                initGame();
-                gameRunning = true;
-                gameInterval = setInterval(gameLoop, gameSpeed);
-                snakeInstructions.classList.add('hidden');
-            }
-            
-            // 方向控制
-            function handleKeyDown(e) {
-                if (!gameRunning) return;
-                
-                const key = e.key;
-                
-                // 防止180度转向
-                if (key === 'ArrowUp' && direction !== 'down') {
-                    nextDirection = 'up';
-                } else if (key === 'ArrowDown' && direction !== 'up') {
-                    nextDirection = 'down';
-                } else if (key === 'ArrowLeft' && direction !== 'right') {
-                    nextDirection = 'left';
-                } else if (key === 'ArrowRight' && direction !== 'left') {
-                    nextDirection = 'right';
-                }
-            }
-            
-            // 事件监听
-            startSnake.addEventListener('click', startGame);
-            snakeRestart.addEventListener('click', startGame);
-            playAgain.addEventListener('click', startGame);
-            document.addEventListener('keydown', handleKeyDown);
-            
-            // 初始化画布
-            initGame();
-            draw();
-        }
-        
-        // 记忆卡片游戏
-        function loadMemoryGame() {
-            modalContent.innerHTML = `
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <span class="text-gray-700 font-medium">翻牌次数: </span>
-                            <span id="memory-flips" class="text-xl font-bold text-primary">0</span>
-                        </div>
-                        <button id="memory-restart" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors">
-                            <i class="fa fa-refresh mr-1"></i> 重新开始
-                        </button>
-                    </div>
-                    
-                    <div class="relative">
-                        <div id="memory-board" class="grid grid-cols-4 sm:grid-cols-6 gap-2 md:gap-4"></div>
-                        
-                        <div id="memory-game-over" class="absolute inset-0 bg-black/70 hidden flex flex-col items-center justify-center text-white">
-                            <h3 class="text-2xl font-bold mb-2">恭喜您！</h3>
-                            <p class="mb-4">您用了 <span id="final-flips">0</span> 次翻牌完成游戏</p>
-                            <button id="memory-play-again" class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg transition-colors">
-                                再玩一次
-                            </button>
-                        </div>
-                        
-                        <div id="memory-instructions" class="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-white">
-                            <h3 class="text-2xl font-bold mb-4">记忆卡片</h3>
-                            <p class="mb-6">翻转卡片寻找相同的图案，锻炼您的记忆力</p>
-                            <button id="start-memory" class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg transition-colors">
-                                开始游戏
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <h4 class="font-medium text-gray-800 mb-2">游戏说明</h4>
-                        <ul class="text-sm text-gray-600 space-y-1">
-                            <li>• 点击卡片进行翻转</li>
-                            <li>• 找到所有配对的卡片</li>
-                            <li>• 尽量用最少的翻牌次数完成游戏</li>
-                            <li>• 翻到两张不同的卡片会自动翻回</li>
-                        </ul>
-                    </div>
-                </div>
-            `;
-            
-            // 游戏变量
-            const icons = [
-                'fa-heart', 'fa-star', 'fa-diamond', 'fa-bolt', 
-                'fa-leaf', 'fa-bomb', 'fa-coffee', 'fa-car', 
-                'fa-plane', 'fa-rocket', 'fa-tree', 'fa-anchor',
-                'fa-apple', 'fa-bell', 'fa-bicycle', 'fa-birthday-cake',
-                'fa-book', 'fa-camera'
+
+        // 触发随机事件
+        function triggerRandomEvent() {
+            const events = [
+                { message: "国内工业生产效率提升，产能增加5%" },
+                { message: "新的军事技术研发成功，陆军战斗力提升" },
+                { message: "外交使团取得突破，与邻国关系改善" },
+                { message: "经济危机爆发，国库收入减少10%" },
+                { message: "民众支持度上升，国家凝聚力增强" }
             ];
             
-            let cards = [];
-            let flippedCards = [];
-            let matchedPairs = 0;
-            let totalPairs = 0;
-            let flips = 0;
-            let gameRunning = false;
-            let isProcessing = false;
+            const randomEvent = events[Math.floor(Math.random() * events.length)];
+            showEventNotification(randomEvent);
             
-            // 获取元素
-            const memoryBoard = document.getElementById('memory-board');
-            const memoryFlips = document.getElementById('memory-flips');
-            const memoryRestart = document.getElementById('memory-restart');
-            const memoryGameOver = document.getElementById('memory-game-over');
-            const finalFlips = document.getElementById('final-flips');
-            const memoryPlayAgain = document.getElementById('memory-play-again');
-            const memoryInstructions = document.getElementById('memory-instructions');
-            const startMemory = document.getElementById('start-memory');
-            
-            // 初始化游戏
-            function initGame() {
-                // 重置游戏状态
-                cards = [];
-                flippedCards = [];
-                matchedPairs = 0;
-                flips = 0;
-                memoryFlips.textContent = flips;
-                memoryBoard.innerHTML = '';
-                isProcessing = false;
-                
-                // 选择12个随机图标（6对）
-                const shuffledIcons = [...icons].sort(() => 0.5 - Math.random()).slice(0, 6);
-                totalPairs = shuffledIcons.length;
-                
-                // 创建卡片数组（每个图标出现两次）
-                const cardIcons = [...shuffledIcons, ...shuffledIcons];
-                
-                // 打乱卡片顺序
-                cardIcons.sort(() => 0.5 - Math.random());
-                
-                // 创建卡片元素
-                cardIcons.forEach((icon, index) => {
-                    const card = document.createElement('div');
-                    card.className = 'memory-card bg-gray-100 rounded-lg aspect-square flex items-center justify-center cursor-pointer shadow-sm hover:shadow transition-all transform hover:scale-105';
-                    card.dataset.icon = icon;
-                    card.dataset.index = index;
-                    
-                    // 卡片内容
-                    card.innerHTML = `
-                        <div class="back face hidden text-2xl md:text-3xl text-primary">
-                            <i class="fa ${icon}"></i>
-                        </div>
-                        <div class="front face text-2xl md:text-3xl text-gray-400">
-                            <i class="fa fa-question"></i>
-                        </div>
-                    `;
-                    
-                    // 添加点击事件
-                    card.addEventListener('click', () => flipCard(card));
-                    
-                    memoryBoard.appendChild(card);
-                    cards.push(card);
-                });
+            // 同步事件到所有玩家
+            if (socket.connected) {
+                socket.send(JSON.stringify({
+                    type: "event",
+                    data: randomEvent
+                }));
             }
-            
-            // 翻转卡片
-            function flipCard(card) {
-                // 检查游戏是否在运行，卡片是否已翻转，是否正在处理
-                if (!gameRunning || isProcessing || 
-                    flippedCards.includes(card) || 
-                    card.classList.contains('flipped')) {
-                    return;
-                }
-                
-                // 翻转卡片
-                card.classList.add('flipped');
-                card.querySelector('.front').classList.add('hidden');
-                card.querySelector('.back').classList.remove('hidden');
-                
-                // 记录翻转的卡片
-                flippedCards.push(card);
-                flips++;
-                memoryFlips.textContent = flips;
-                
-                // 当翻到两张卡片时检查是否匹配
-                if (flippedCards.length === 2) {
-                    checkForMatch();
-                }
-            }
-            
-            // 检查是否匹配
-            function checkForMatch() {
-                isProcessing = true;
-                const [card1, card2] = flippedCards;
-                
-                if (card1.dataset.icon === card2.dataset.icon) {
-                    // 匹配成功
-                    card1.classList.add('matched');
-                    card2.classList.add('matched');
-                    card1.style.backgroundColor = '#dcfce7';
-                    card2.style.backgroundColor = '#dcfce7';
-                    card1.style.cursor = 'default';
-                    card2.style.cursor = 'default';
-                    
-                    matchedPairs++;
-                    
-                    // 清空翻转卡片数组
-                    flippedCards = [];
-                    isProcessing = false;
-                    
-                    // 检查游戏是否结束
-                    if (matchedPairs === totalPairs) {
-                        gameOver();
-                    }
-                } else {
-                    // 匹配失败，翻回卡片
-                    setTimeout(() => {
-                        card1.classList.remove('flipped');
-                        card2.classList.remove('flipped');
-                        card1.querySelector('.front').classList.remove('hidden');
-                        card2.querySelector('.front').classList.remove('hidden');
-                        card1.querySelector('.back').classList.add('hidden');
-                        card2.querySelector('.back').classList.add('hidden');
-                        
-                        // 清空翻转卡片数组
-                        flippedCards = [];
-                        isProcessing = false;
-                    }, 1000);
-                }
-            }
-            
-            // 游戏结束
-            function gameOver() {
-                gameRunning = false;
-                finalFlips.textContent = flips;
-                memoryGameOver.classList.remove('hidden');
-                
-                // 游戏结束时根据表现奖励额外积分
-                if (userSystem.currentUser) {
-                    // 翻牌次数越少，奖励积分越多
-                    const bonusPoints = Math.max(1, Math.floor(50 / flips) * 5);
-                    userSystem.addPoints(bonusPoints);
-                    showPointsNotification(bonusPoints);
-                }
-            }
-            
-            // 开始游戏
-            function startGame() {
-                initGame();
-                gameRunning = true;
-                memoryInstructions.classList.add('hidden');
-            }
-            
-            // 事件监听
-            startMemory.addEventListener('click', startGame);
-            memoryRestart.addEventListener('click', startGame);
-            memoryPlayAgain.addEventListener('click', startGame);
-            
-            // 初始化游戏
-            initGame();
         }
-        
-        // 打砖块游戏
-        function loadBreakoutGame() {
-            modalContent.innerHTML = `
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <span class="text-gray-700 font-medium">分数: </span>
-                            <span id="breakout-score" class="text-xl font-bold text-primary">0</span>
-                        </div>
-                        <div>
-                            <span class="text-gray-700 font-medium">生命: </span>
-                            <span id="breakout-lives" class="text-xl font-bold text-primary">3</span>
-                        </div>
-                        <button id="breakout-restart" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors">
-                            <i class="fa fa-refresh mr-1"></i> 重新开始
-                        </button>
-                    </div>
-                    
-                    <div class="relative border-2 border-gray-300 rounded-lg overflow-hidden">
-                        <canvas id="breakout-canvas" width="600" height="400" class="w-full"></canvas>
-                        <div id="breakout-game-over" class="absolute inset-0 bg-black/70 hidden flex flex-col items-center justify-center text-white">
-                            <h3 class="text-2xl font-bold mb-2">游戏结束</h3>
-                            <p class="mb-4">您的分数: <span id="breakout-final-score">0</span></p>
-                            <button id="breakout-play-again" class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg transition-colors">
-                                再玩一次
-                            </button></button>
-                        </div>
-                        <div id="breakout-win" class="absolute inset-0 bg-black/70 hidden flex flex-col items-center justify-center text-white">
-                            <h3 class="text-2xl font-bold mb-2">恭喜您赢了！</h3>
-                            <p class="mb-4">您的分数: <span id="breakout-win-score">0</span></p>
-                            <button id="breakout-play-again-win" class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg transition-colors">
-                                再玩一次
-                            </button>
-                        </div>
-                        <div id="breakout-instructions" class="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-white">
-                            <h3 class="text-2xl font-bold mb-4">打砖块</h3>
-                            <p class="mb-2">使用鼠标或左右方向键控制挡板</p>
-                            <p class="mb-6">反弹小球击碎所有砖块，不要让小球掉下去</p>
-                            <button id="start-breakout" class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg transition-colors">
-                                开始游戏
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <h4 class="font-medium text-gray-800 mb-2">游戏说明</h4>
-                        <ul class="text-sm text-gray-600 space-y-1">
-                            <li>• 使用鼠标或左右方向键控制挡板移动</li>
-                            <li>• 反弹小球击碎所有砖块</li>
-                            <li>• 小球掉出屏幕会失去一条生命</li>
-                            <li>• 三种颜色的砖块：红色(3分)，蓝色(2分)，绿色(1分)</li>
-                            <li>• 失去所有生命游戏结束</li>
-                        </ul>
-                    </div>
-                </div>
-            `;
+
+        // 显示通用通知
+        function showNotification(message) {
+            // 可以实现一个浮动通知系统
+            console.log("通知:", message);
+        }
+
+        // 初始化事件监听器
+        function initEventListeners() {
+            // 暂停/继续按钮
+            document.getElementById('pause-btn').addEventListener('click', togglePause);
+            document.getElementById('play-pause').addEventListener('click', togglePause);
             
-            // 游戏变量
-            let canvas, ctx;
-            let paddle = {
-                x: 0,
-                y: 0,
-                width: 80,
-                height: 10,
-                dx: 8
-            };
+            // 速度控制
+            document.getElementById('speed-up').addEventListener('click', () => changeSpeed(1));
+            document.getElementById('speed-down').addEventListener('click', () => changeSpeed(-1));
             
-            let ball = {
-                x: 0,
-                y: 0,
-                radius: 8,
-                dx: 4,
-                dy: -4
-            };
+            // 地图控制
+            document.getElementById('zoom-in').addEventListener('click', () => zoomMap(1));
+            document.getElementById('zoom-out').addEventListener('click', () => zoomMap(-1));
+            document.getElementById('reset-view').addEventListener('click', resetMapView);
             
-            let bricks = [];
-            let brickInfo = {
-                width: 70,
-                height: 20,
-                padding: 10,
-                offsetX: 25,
-                offsetY: 50,
-                visible: true
-            };
+            // 聊天功能
+            document.getElementById('send-chat').addEventListener('click', sendChatMessage);
+            document.getElementById('chat-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendChatMessage();
+            });
             
-            let score = 0;
-            let lives = 3;
-            let gameInterval;
-            let gameRunning = false;
-            let rightPressed = false;
-            let leftPressed = false;
+            // 玩家面板
+            document.querySelectorAll('a[href="#"]:contains("联机玩家")').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showPlayersPanel();
+                });
+            });
+            document.getElementById('close-players').addEventListener('click', hidePlayersPanel);
             
-            // 获取元素
-            const breakoutCanvas = document.getElementById('breakout-canvas');
-            const breakoutScore = document.getElementById('breakout-score');
-            const breakoutLives = document.getElementById('breakout-lives');
-            const breakoutRestart = document.getElementById('breakout-restart');
-            const breakoutGameOver = document.getElementById('breakout-game-over');
-            const breakoutFinalScore = document.getElementById('breakout-final-score');
-            const breakoutPlayAgain = document.getElementById('breakout-play-again');
-            const breakoutWin = document.getElementById('breakout-win');
-            const breakoutWinScore = document.getElementById('breakout-win-score');
-            const breakoutPlayAgainWin = document.getElementById('breakout-play-again-win');
-            const breakoutInstructions = document.getElementById('breakout-instructions');
-            const startBreakout = document.getElementById('start-breakout');
+            // 关闭事件通知
+            document.querySelector('.close-event').addEventListener('click', () => {
+                document.getElementById('event-notification').classList.add('hidden');
+            });
             
-            // 初始化游戏
-            function initGame() {
-                canvas = breakoutCanvas;
-                ctx = canvas.getContext('2d');
-                
-                // 设置挡板初始位置
-                paddle.x = canvas.width / 2 - paddle.width / 2;
-                paddle.y = canvas.height - paddle.height - 10;
-                
-                // 设置球初始位置
-                resetBall();
-                
-                // 重置分数和生命
-                score = 0;
-                lives = 3;
-                breakoutScore.textContent = score;
-                breakoutLives.textContent = lives;
-                
-                // 创建砖块
-                createBricks();
-                
-                // 清除游戏间隔
-                if (gameInterval) clearInterval(gameInterval);
-                
-                // 隐藏游戏结束和胜利界面
-                breakoutGameOver.classList.add('hidden');
-                breakoutWin.classList.add('hidden');
-            }
+            // 省份点击
+            document.querySelectorAll('[data-province]').forEach(province => {
+                province.addEventListener('click', () => {
+                    gameState.selectedProvince = province.getAttribute('data-province');
+                    // 这里可以添加省份详情更新逻辑
+                });
+            });
+        }
+
+        // 初始化游戏
+        function initGame() {
+            initWebSocket();
+            initEventListeners();
             
-            // 创建砖块
-            function createBricks() {
-                bricks = [];
-                
-                // 计算可以放置多少列砖块
-                const columnCount = Math.floor((canvas.width - brickInfo.offsetX * 2) / (brickInfo.width + brickInfo.padding));
-                
-                // 创建砖块网格
-                for (let c = 0; c < columnCount; c++) {
-                    bricks[c] = [];
-                    // 创建3行砖块，每行不同颜色
-                    for (let r = 0; r < 3; r++) {
-                        const brickX = c * (brickInfo.width + brickInfo.padding) + brickInfo.offsetX;
-                        const brickY = r * (brickInfo.height + brickInfo.padding) + brickInfo.offsetY;
-                        
-                        // 根据行数设置不同颜色和分数
-                        let color, points;
-                        if (r === 0) {
-                            color = '#EF4444'; // 红色
-                            points = 3;
-                        } else if (r === 1) {
-                            color = '#3B82F6'; // 蓝色
-                            points = 2;
-                        } else {
-                            color = '#10B981'; // 绿色
-                            points = 1;
-                        }
-                        
-                        bricks[c][r] = {
-                            x: brickX,
-                            y: brickY,
-                            visible: true,
-                            color: color,
-                            points: points
-                        };
-                    }
-                }
-            }
+            // 启动日期更新定时器
+            setInterval(updateDate, 1000);
             
-            // 重置球的位置
-            function resetBall() {
-                ball.x = canvas.width / 2;
-                ball.y = paddle.y - ball.radius;
-                ball.dx = 4 * (Math.random() > 0.5 ? 1 : -1); // 随机水平方向
-                ball.dy = -4;
-            }
-            
-            // 绘制挡板
-            function drawPaddle() {
-                ctx.beginPath();
-                ctx.rect(paddle.x, paddle.y, paddle.width, paddle.height);
-                ctx.fillStyle = '#3B82F6';
-                ctx.fill();
-                ctx.closePath();
-            }
-            
-            // 绘制球
-            function drawBall() {
-                ctx.beginPath();
-                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-                ctx.fillStyle = '#8B5CF6';
-                ctx.fill();
-                ctx.closePath();
-            }
-            
-            // 绘制砖块
-            function drawBricks() {
-                for (let c = 0; c < bricks.length; c++) {
-                    for (let r = 0; r < bricks[c].length; r++) {
-                        const brick = bricks[c][r];
-                        if (brick.visible) {
-                            ctx.beginPath();
-                            ctx.rect(brick.x, brick.y, brickInfo.width, brickInfo.height);
-                            ctx.fillStyle = brick.color;
-                            ctx.fill();
-                            ctx.closePath();
-                        }
-                    }
-                }
-            }
-            
-            // 检测碰撞
-            function detectCollisions() {
-                // 砖块碰撞检测
-                for (let c = 0; c < bricks.length; c++) {
-                    for (let r = 0; r < bricks[c].length; r++) {
-                        const brick = bricks[c][r];
-                        if (brick.visible) {
-                            if (
-                                ball.x + ball.radius > brick.x &&
-                                ball.x - ball.radius < brick.x + brickInfo.width &&
-                                ball.y + ball.radius > brick.y &&
-                                ball.y - ball.radius < brick.y + brickInfo.height
-                            ) {
-                                ball.dy = -ball.dy;
-                                brick.visible = false;
-                                
-                                // 加分
-                                score += brick.points;
-                                breakoutScore.textContent = score;
-                                
-                                // 检查是否赢了
-                                checkWin();
-                            }
-                        }
-                    }
-                }
-                
-                // 墙壁碰撞检测
-                if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) {
-                    ball.dx = -ball.dx;
-                }
-                
-                if (ball.y - ball.radius < 0) {
-                    ball.dy = -ball.dy;
-                }
-                
-                // 底部碰撞（失去生命）
-                if (ball.y + ball.radius > canvas.height) {
-                    lives--;
-                    breakoutLives.textContent = lives;
-                    
-                    if (lives === 0) {
-                        gameOver();
-                    } else {
-                        resetBall();
-                    }
-                }
-                
-                // 挡板碰撞检测
-                if (
-                    ball.y + ball.radius > paddle.y &&
-                    ball.y - ball.radius < paddle.y + paddle.height &&
-                    ball.x + ball.radius > paddle.x &&
-                    ball.x - ball.radius < paddle.x + paddle.width
-                ) {
-                    // 根据碰撞位置调整反弹角度
-                    const hitPosition = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
-                    const angle = hitPosition * (Math.PI / 3); // 最大60度
-                    
-                    ball.dx = 4 * Math.sin(angle);
-                    ball.dy = -4 * Math.cos(angle);
-                }
-            }
-            
-            // 移动挡板
-            function movePaddle() {
-                if (rightPressed && paddle.x + paddle.width < canvas.width) {
-                    paddle.x += paddle.dx;
-                } else if (leftPressed && paddle.x > 0) {
-                    paddle.x -= paddle.dx;
-                }
-            }
-            
-            // 移动球
-            function moveBall() {
-                ball.x += ball.dx;
-                ball.y += ball.dy;
-            }
-            
-            // 绘制游戏
-            function draw() {
-                // 清空画布
-                ctx.fillStyle = '#f8fafc';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                // 绘制游戏元素
-                drawBricks();
-                drawBall();
-                drawPaddle();
+            // 模拟随机事件
+            setTimeout(triggerRandomEvent, 15000);
+        }
+
+        // 当页面加载完成后初始化游戏
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+</html>
