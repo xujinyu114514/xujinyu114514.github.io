@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>国策风云 - 网页策略游戏</title>
+    <title>红色黎明 - 中国战略模拟</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
@@ -12,19 +12,21 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#1a2456',
-                        secondary: '#8b0000',
-                        dark: '#0f172a',
-                        panel: '#1e293b',
-                        accent: '#f97316',
-                        success: '#10b981',
-                        warning: '#f59e0b',
-                        info: '#3b82f6',
-                        neutral: '#64748b'
+                        primary: '#C41E3A', // 共产党红色
+                        secondary: '#1E3A8A',
+                        dark: '#111827',
+                        light: '#F9FAFB',
+                        map: {
+                            province: '#4B5563',
+                            owned: '#10B981',
+                            enemy: '#EF4444',
+                            neutral: '#9CA3AF',
+                            selected: '#F59E0B'
+                        }
                     },
                     fontFamily: {
-                        hoi: ['"Times New Roman"', 'serif']
-                    }
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
                 }
             }
         }
@@ -34,846 +36,804 @@
             .content-auto {
                 content-visibility: auto;
             }
-            .text-shadow {
-                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
-            }
             .map-grid {
-                background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-                                linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+                display: grid;
+                grid-template-columns: repeat(16, minmax(0, 1fr));
+                grid-template-rows: repeat(12, minmax(0, 1fr));
+                gap: 1px;
             }
-            .panel-border {
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            .province {
+                transition: all 0.2s ease;
+                cursor: pointer;
             }
-            .btn-hover {
+            .province:hover {
+                filter: brightness(1.2);
+                transform: scale(1.05);
+            }
+            .tech-node {
                 transition: all 0.2s ease;
             }
-            .btn-hover:hover {
+            .tech-node:hover {
                 transform: translateY(-2px);
-                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            }
+            .btn-action {
+                @apply bg-primary hover:bg-primary/80 text-white font-bold py-2 px-4 rounded transition-all duration-200 transform hover:scale-105 active:scale-95;
+            }
+            .panel {
+                @apply bg-dark/80 backdrop-blur-sm rounded-lg border border-gray-700 shadow-lg p-4;
             }
         }
     </style>
 </head>
-<body class="bg-dark text-gray-200 font-hoi overflow-hidden h-screen flex flex-col">
+<body class="bg-gray-900 text-light min-h-screen flex flex-col overflow-hidden">
     <!-- 顶部状态栏 -->
-    <header class="bg-primary py-2 px-4 flex justify-between items-center border-b border-gray-700 z-10">
+    <header class="bg-dark border-b border-gray-700 px-4 py-2 flex justify-between items-center">
         <div class="flex items-center space-x-4">
-            <h1 class="text-2xl font-bold text-white flex items-center">
-                <i class="fa fa-globe mr-2 text-accent"></i>国策风云
+            <h1 class="text-2xl font-bold text-primary flex items-center">
+                <i class="fa fa-star mr-2"></i>红色黎明
             </h1>
-            <div class="hidden md:flex items-center space-x-6 ml-6">
+            <div class="hidden md:flex items-center space-x-6">
                 <div class="flex items-center">
-                    <i class="fa fa-clock-o mr-1 text-neutral"></i>
+                    <i class="fa fa-calendar-o mr-1"></i>
                     <span id="game-date">1936年1月1日</span>
                 </div>
                 <div class="flex items-center">
-                    <i class="fa fa-users mr-1 text-neutral"></i>
-                    <span id="online-players">2/8 玩家</span>
+                    <i class="fa fa-industry mr-1"></i>
+                    <span id="resource-industry">工业: 12</span>
                 </div>
                 <div class="flex items-center">
-                    <i class="fa fa-server mr-1 text-neutral"></i>
-                    <span id="connection-status" class="text-success">已连接</span>
+                    <i class="fa fa-wheat mr-1"></i>
+                    <span id="resource-food">粮食: 45</span>
+                </div>
+                <div class="flex items-center">
+                    <i class="fa fa-users mr-1"></i>
+                    <span id="resource-manpower">人力: 1250000</span>
+                </div>
+                <div class="flex items-center">
+                    <i class="fa fa-money mr-1"></i>
+                    <span id="resource-money">资金: 3200</span>
                 </div>
             </div>
         </div>
-        
         <div class="flex items-center space-x-3">
-            <button id="pause-btn" class="bg-panel hover:bg-gray-700 text-white py-1 px-3 rounded btn-hover">
-                <i class="fa fa-pause mr-1"></i>暂停
+            <button id="btn-save" class="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
+                <i class="fa fa-save mr-1"></i>保存
             </button>
-            <button id="options-btn" class="bg-panel hover:bg-gray-700 text-white py-1 px-3 rounded btn-hover">
-                <i class="fa fa-cog mr-1"></i>选项
+            <button id="btn-menu" class="bg-gray-700 hover:bg-gray-600 text-white py-1 px-3 rounded text-sm">
+                <i class="fa fa-bars mr-1"></i>菜单
             </button>
-            <div class="flex items-center ml-2">
-                <img src="https://picsum.photos/id/1005/32/32" alt="玩家头像" class="w-8 h-8 rounded-full border-2 border-accent">
-                <span class="ml-2 hidden md:inline">玩家1 (德国)</span>
-            </div>
+            <button id="btn-speed" class="bg-gray-700 hover:bg-gray-600 text-white py-1 px-3 rounded text-sm">
+                <i class="fa fa-play mr-1"></i>1x
+            </button>
         </div>
     </header>
 
-    <!-- 主要游戏区域 -->
+    <!-- 主游戏区域 -->
     <main class="flex flex-1 overflow-hidden">
-        <!-- 左侧控制面板 -->
-        <aside class="w-64 bg-panel panel-border flex flex-col h-full z-10">
-            <div class="p-3 border-b border-gray-700">
-                <h2 class="font-bold text-lg text-white">德国</h2>
-                <div class="flex justify-between mt-1 text-sm">
-                    <span>法西斯主义</span>
-                    <span class="text-accent">1936年</span>
+        <!-- 左侧面板 -->
+        <aside class="w-64 bg-dark border-r border-gray-700 flex flex-col overflow-hidden">
+            <!-- 省份信息 -->
+            <div class="panel flex-1 overflow-y-auto">
+                <h2 class="text-lg font-bold mb-3 flex items-center">
+                    <i class="fa fa-map-marker text-primary mr-2"></i>省份信息
+                </h2>
+                <div id="province-info" class="space-y-2">
+                    <p class="text-gray-400 italic text-sm">请在地图上选择一个省份</p>
                 </div>
             </div>
             
-            <!-- 资源面板 -->
-            <div class="p-3 border-b border-gray-700">
-                <h3 class="text-sm uppercase text-neutral font-semibold mb-2">资源</h3>
-                <div class="grid grid-cols-2 gap-2">
-                    <div class="flex items-center">
-                        <i class="fa fa-bolt text-yellow-400 w-5"></i>
-                        <span class="ml-1">能源: 125</span>
+            <!-- 军事单位 -->
+            <div class="panel border-t border-gray-700 flex-1 overflow-y-auto">
+                <h2 class="text-lg font-bold mb-3 flex items-center">
+                    <i class="fa fa-shield text-primary mr-2"></i>军事单位
+                </h2>
+                <div id="military-units" class="space-y-2 max-h-full overflow-y-auto">
+                    <div class="bg-gray-800 rounded p-2 hover:bg-gray-700 transition-colors">
+                        <div class="font-bold">第1集团军</div>
+                        <div class="text-sm text-gray-400">位置: 陕西省</div>
+                        <div class="text-sm">兵力: 24,000 <i class="fa fa-soldier"></i></div>
+                        <div class="text-sm">将领: 彭德怀</div>
                     </div>
-                    <div class="flex items-center">
-                        <i class="fa fa-industry text-gray-400 w-5"></i>
-                        <span class="ml-1">工业: 89</span>
+                    <div class="bg-gray-800 rounded p-2 hover:bg-gray-700 transition-colors">
+                        <div class="font-bold">第2集团军</div>
+                        <div class="text-sm text-gray-400">位置: 甘肃省</div>
+                        <div class="text-sm">兵力: 18,000 <i class="fa fa-soldier"></i></div>
+                        <div class="text-sm">将领: 贺龙</div>
                     </div>
-                    <div class="flex items-center">
-                        <i class="fa fa-leaf text-green-500 w-5"></i>
-                        <span class="ml-1">补给: 210</span>
-                    </div>
-                    <div class="flex items-center">
-                        <i class="fa fa-money text-green-400 w-5"></i>
-                        <span class="ml-1">资金: 5420</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 导航菜单 -->
-            <nav class="flex-1 overflow-y-auto">
-                <ul>
-                    <li>
-                        <a href="#" class="flex items-center p-3 bg-primary border-l-4 border-accent">
-                            <i class="fa fa-map-o w-6"></i>
-                            <span>地图视图</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" class="flex items-center p-3 hover:bg-primary/50 transition-colors">
-                            <i class="fa fa-sitemap w-6"></i>
-                            <span>政治</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" class="flex items-center p-3 hover:bg-primary/50 transition-colors">
-                            <i class="fa fa-shield w-6"></i>
-                            <span>军事</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" class="flex items-center p-3 hover:bg-primary/50 transition-colors">
-                            <i class="fa fa-industry w-6"></i>
-                            <span>工业</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" class="flex items-center p-3 hover:bg-primary/50 transition-colors">
-                            <i class="fa fa-handshake-o w-6"></i>
-                            <span>外交</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" class="flex items-center p-3 hover:bg-primary/50 transition-colors">
-                            <i class="fa fa-book w-6"></i>
-                            <span>国策</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" class="flex items-center p-3 hover:bg-primary/50 transition-colors">
-                            <i class="fa fa-users w-6"></i>
-                            <span>联机玩家</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-            
-            <!-- 底部信息 -->
-            <div class="p-2 border-t border-gray-700 text-xs text-neutral">
-                <div class="flex justify-between">
-                    <span>版本 0.1.0</span>
-                    <span id="ping-indicator">延迟: 45ms</span>
                 </div>
             </div>
         </aside>
 
         <!-- 中央地图区域 -->
-        <section class="flex-1 relative bg-primary overflow-hidden">
+        <section class="flex-1 overflow-hidden relative bg-gray-800">
+            <!-- 地图控制 -->
+            <div class="absolute top-4 left-4 z-10 bg-dark/70 backdrop-blur-sm rounded-lg p-2 flex flex-col space-y-2">
+                <button id="zoom-in" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700">
+                    <i class="fa fa-search-plus"></i>
+                </button>
+                <button id="zoom-out" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700">
+                    <i class="fa fa-search-minus"></i>
+                </button>
+                <div class="border-t border-gray-700 my-1"></div>
+                <button id="map-china" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 bg-primary/20">
+                    <i class="fa fa-map"></i>
+                </button>
+                <button id="map-asia" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700">
+                    <i class="fa fa-globe"></i>
+                </button>
+            </div>
+
             <!-- 地图容器 -->
-            <div id="map-container" class="absolute inset-0 map-grid bg-[url('https://picsum.photos/id/101/1920/1080')] bg-cover bg-center">
-                <!-- 地图将通过JS动态生成 -->
-                <div class="absolute top-[30%] left-[45%] w-12 h-12 bg-secondary/70 rounded-full flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-accent transition-all" data-province="berlin">
-                    <span class="text-xs font-bold">柏林</span>
-                </div>
-                <div class="absolute top-[35%] left-[50%] w-10 h-10 bg-primary/70 rounded-full flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-accent transition-all" data-province="warsaw">
-                    <span class="text-xs">华沙</span>
-                </div>
-                <div class="absolute top-[25%] left-[35%] w-10 h-10 bg-primary/70 rounded-full flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-accent transition-all" data-province="paris">
-                    <span class="text-xs">巴黎</span>
-                </div>
-                <div class="absolute top-[20%] left-[30%] w-10 h-10 bg-primary/70 rounded-full flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-accent transition-all" data-province="london">
-                    <span class="text-xs">伦敦</span>
+            <div id="map-container" class="w-full h-full overflow-hidden relative">
+                <div id="map" class="absolute w-[2000px] h-[1500px] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 transition-transform duration-300 ease-out">
+                    <!-- 中国地图将通过JS动态生成 -->
+                    <div id="china-map" class="map-grid w-full h-full">
+                        <!-- 省份将通过JavaScript动态生成 -->
+                    </div>
                 </div>
             </div>
-            
-            <!-- 地图控制按钮 -->
-            <div class="absolute bottom-4 right-4 flex flex-col space-y-2 z-10">
-                <button id="zoom-in" class="bg-panel w-10 h-10 rounded-full flex items-center justify-center shadow-lg btn-hover">
-                    <i class="fa fa-plus"></i>
+
+            <!-- 快速操作按钮 -->
+            <div class="absolute bottom-4 right-4 z-10 flex flex-col space-y-2">
+                <button id="btn-tech" class="btn-action flex items-center">
+                    <i class="fa fa-flask mr-2"></i>科技
                 </button>
-                <button id="zoom-out" class="bg-panel w-10 h-10 rounded-full flex items-center justify-center shadow-lg btn-hover">
-                    <i class="fa fa-minus"></i>
+                <button id="btn-recruit" class="btn-action flex items-center">
+                    <i class="fa fa-user-plus mr-2"></i>招募
                 </button>
-                <button id="reset-view" class="bg-panel w-10 h-10 rounded-full flex items-center justify-center shadow-lg btn-hover">
-                    <i class="fa fa-home"></i>
+                <button id="btn-events" class="btn-action flex items-center">
+                    <i class="fa fa-flag mr-2"></i>事件
                 </button>
-            </div>
-            
-            <!-- 时间控制 -->
-            <div class="absolute bottom-4 left-4 bg-panel p-2 rounded-lg shadow-lg z-10 panel-border">
-                <div class="flex items-center space-x-3">
-                    <button id="speed-down" class="text-neutral hover:text-white">
-                        <i class="fa fa-step-backward"></i>
-                    </button>
-                    <button id="play-pause" class="bg-accent text-white py-1 px-3 rounded btn-hover">
-                        <i class="fa fa-play mr-1"></i>正常速度
-                    </button>
-                    <button id="speed-up" class="text-neutral hover:text-white">
-                        <i class="fa fa-step-forward"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- 事件通知 -->
-            <div id="event-notification" class="hidden absolute top-4 right-4 w-80 bg-panel p-4 rounded-lg shadow-lg z-20 panel-border animate-fade-in">
-                <div class="flex justify-between items-start">
-                    <h3 class="font-bold text-white">新事件</h3>
-                    <button class="close-event text-neutral hover:text-white">
-                        <i class="fa fa-times"></i>
-                    </button>
-                </div>
-                <p class="mt-2 text-sm">德国重新军事化莱茵兰地区，国际社会反应强烈。</p>
-                <div class="mt-3 flex justify-end">
-                    <button class="bg-accent text-white text-sm py-1 px-3 rounded btn-hover">
-                        处理事件
-                    </button>
-                </div>
             </div>
         </section>
 
-        <!-- 右侧信息面板 -->
-        <aside class="w-80 bg-panel panel-border flex flex-col h-full z-10 hidden md:flex">
-            <!-- 省份信息 -->
-            <div class="p-3 border-b border-gray-700">
-                <h2 class="font-bold text-lg text-white">柏林</h2>
-                <div class="flex items-center text-sm text-neutral mt-1">
-                    <i class="fa fa-map-marker mr-1"></i>
-                    <span>德国 - 普鲁士地区</span>
-                </div>
-            </div>
-            
-            <!-- 省份数据 -->
-            <div class="p-3 border-b border-gray-700">
-                <h3 class="text-sm uppercase text-neutral font-semibold mb-2">省份数据</h3>
-                <div class="space-y-2">
-                    <div>
-                        <div class="flex justify-between text-xs text-neutral">
-                            <span>基础设施</span>
-                            <span>85%</span>
-                        </div>
-                        <div class="w-full bg-gray-700 rounded-full h-1.5 mt-1">
-                            <div class="bg-info h-1.5 rounded-full" style="width: 85%"></div>
+        <!-- 右侧面板 -->
+        <aside class="w-80 bg-dark border-l border-gray-700 flex flex-col overflow-hidden">
+            <!-- 事件面板 -->
+            <div class="panel flex-1 overflow-y-auto">
+                <h2 class="text-lg font-bold mb-3 flex items-center">
+                    <i class="fa fa-newspaper-o text-primary mr-2"></i>历史事件
+                </h2>
+                <div id="events-container" class="space-y-3">
+                    <div class="bg-primary/10 border-l-4 border-primary rounded p-3">
+                        <div class="font-bold">西安事变</div>
+                        <div class="text-sm text-gray-400 mb-2">1936年12月12日</div>
+                        <p class="text-sm mb-2">张学良和杨虎城发动兵谏，扣押蒋介石，要求停止内战、一致抗日。</p>
+                        <div class="flex space-x-2 mt-2">
+                            <button class="bg-primary/80 hover:bg-primary text-xs px-2 py-1 rounded">支持联合抗日</button>
+                            <button class="bg-gray-700 hover:bg-gray-600 text-xs px-2 py-1 rounded">保持独立</button>
                         </div>
                     </div>
-                    <div>
-                        <div class="flex justify-between text-xs text-neutral">
-                            <span>工业产能</span>
-                            <span>12/12</span>
-                        </div>
-                        <div class="w-full bg-gray-700 rounded-full h-1.5 mt-1">
-                            <div class="bg-warning h-1.5 rounded-full" style="width: 100%"></div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between text-xs text-neutral">
-                            <span>民心支持</span>
-                            <span>92%</span>
-                        </div>
-                        <div class="w-full bg-gray-700 rounded-full h-1.5 mt-1">
-                            <div class="bg-success h-1.5 rounded-full" style="width: 92%"></div>
-                        </div>
+                    <div class="bg-gray-800 rounded p-3">
+                        <div class="font-bold">日军全面侵华</div>
+                        <div class="text-sm text-gray-400 mb-2">1937年7月7日（即将发生）</div>
+                        <p class="text-sm">预计日军将在卢沟桥发动进攻，全面侵华战争即将爆发。</p>
                     </div>
                 </div>
             </div>
             
-            <!-- 驻军信息 -->
-            <div class="p-3 border-b border-gray-700">
-                <h3 class="text-sm uppercase text-neutral font-semibold mb-2">驻军</h3>
-                <div class="space-y-2">
-                    <div class="flex items-center p-2 bg-primary/50 rounded">
-                        <img src="https://picsum.photos/id/1074/32/32" alt="陆军" class="w-8 h-8 rounded">
-                        <div class="ml-2">
-                            <div class="font-medium text-sm">第1装甲师</div>
-                            <div class="text-xs text-neutral">兵力: 12,500</div>
+            <!-- 将领系统 -->
+            <div class="panel border-t border-gray-700 flex-1 overflow-y-auto">
+                <h2 class="text-lg font-bold mb-3 flex items-center">
+                    <i class="fa fa-user-circle text-primary mr-2"></i>将领系统
+                </h2>
+                <div id="generals-container" class="space-y-3">
+                    <div class="flex items-center space-x-3 bg-gray-800 rounded p-2 hover:bg-gray-700 transition-colors">
+                        <img src="https://picsum.photos/id/1005/60/60" alt="毛泽东" class="w-12 h-12 rounded-full object-cover">
+                        <div>
+                            <div class="font-bold">毛泽东</div>
+                            <div class="text-xs text-gray-400">领袖 | 政治: 95 战略: 90</div>
                         </div>
                     </div>
-                    <div class="flex items-center p-2 bg-primary/50 rounded">
-                        <img src="https://picsum.photos/id/1062/32/32" alt="空军" class="w-8 h-8 rounded">
-                        <div class="ml-2">
-                            <div class="font-medium text-sm">第2航空联队</div>
-                            <div class="text-xs text-neutral">飞机: 144</div>
+                    <div class="flex items-center space-x-3 bg-gray-800 rounded p-2 hover:bg-gray-700 transition-colors">
+                        <img src="https://picsum.photos/id/1012/60/60" alt="朱德" class="w-12 h-12 rounded-full object-cover">
+                        <div>
+                            <div class="font-bold">朱德</div>
+                            <div class="text-xs text-gray-400">元帅 | 指挥: 85 进攻: 80</div>
                         </div>
                     </div>
-                </div>
-            </div>
-            
-            <!-- 生产队列 -->
-            <div class="p-3 border-b border-gray-700">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="text-sm uppercase text-neutral font-semibold">生产队列</h3>
-                    <button class="text-accent text-xs hover:underline">
-                        <i class="fa fa-plus mr-1"></i>添加
-                    </button>
-                </div>
-                <div class="space-y-1">
-                    <div class="flex justify-between items-center text-sm p-1.5 bg-primary/30 rounded">
-                        <span>IV号坦克</span>
-                        <span class="text-xs text-neutral">剩余: 14天</span>
-                    </div>
-                    <div class="flex justify-between items-center text-sm p-1.5 bg-primary/30 rounded">
-                        <span>JU-88轰炸机</span>
-                        <span class="text-xs text-neutral">剩余: 21天</span>
-                    </div>
-                    <div class="flex justify-between items-center text-sm p-1.5 bg-primary/30 rounded opacity-70">
-                        <span>步兵装备</span>
-                        <span class="text-xs text-neutral">剩余: 35天</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 联机聊天 -->
-            <div class="flex-1 flex flex-col">
-                <div class="p-3 border-b border-gray-700">
-                    <h3 class="text-sm uppercase text-neutral font-semibold">联机聊天</h3>
-                </div>
-                <div id="chat-messages" class="flex-1 overflow-y-auto p-3 space-y-3">
-                    <div class="flex">
-                        <img src="https://picsum.photos/id/1012/32/32" alt="玩家2头像" class="w-6 h-6 rounded-full">
-                        <div class="ml-2">
-                            <div class="text-xs font-semibold">玩家2 (苏联)</div>
-                            <div class="text-sm bg-primary/50 p-2 rounded max-w-[80%]">
-                                我正在扩充西部边境的军队
-                            </div>
+                    <div class="flex items-center space-x-3 bg-gray-800 rounded p-2 hover:bg-gray-700 transition-colors">
+                        <img src="https://picsum.photos/id/1025/60/60" alt="彭德怀" class="w-12 h-12 rounded-full object-cover">
+                        <div>
+                            <div class="font-bold">彭德怀</div>
+                            <div class="text-xs text-gray-400">元帅 | 指挥: 90 防御: 85</div>
                         </div>
-                    </div>
-                    <div class="flex">
-                        <img src="https://picsum.photos/id/1025/32/32" alt="玩家3头像" class="w-6 h-6 rounded-full">
-                        <div class="ml-2">
-                            <div class="text-xs font-semibold">玩家3 (英国)</div>
-                            <div class="text-sm bg-primary/50 p-2 rounded max-w-[80%]">
-                                我们不会容忍任何对捷克斯洛伐克的侵略
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex justify-end">
-                        <div class="mr-2 text-right">
-                            <div class="text-xs font-semibold">我</div>
-                            <div class="text-sm bg-accent/80 p-2 rounded max-w-[80%]">
-                                德国需要更多的生存空间
-                            </div>
-                        </div>
-                        <img src="https://picsum.photos/id/1005/32/32" alt="我的头像" class="w-6 h-6 rounded-full">
-                    </div>
-                </div>
-                <div class="p-3 border-t border-gray-700">
-                    <div class="flex">
-                        <input type="text" id="chat-input" placeholder="输入消息..." class="flex-1 bg-primary border border-gray-700 rounded-l px-3 py-2 text-sm focus:outline-none focus:border-accent">
-                        <button id="send-chat" class="bg-accent text-white px-3 py-2 rounded-r hover:bg-accent/80 transition-colors">
-                            <i class="fa fa-paper-plane"></i>
-                        </button>
                     </div>
                 </div>
             </div>
         </aside>
     </main>
 
-    <!-- 联机玩家面板 (默认隐藏) -->
-    <div id="players-panel" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
-        <div class="bg-panel w-96 rounded-lg panel-border max-h-[80vh] flex flex-col">
+    <!-- 科技树模态框 -->
+    <div id="tech-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden">
+        <div class="bg-dark border border-gray-700 rounded-lg w-4/5 max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
             <div class="p-4 border-b border-gray-700 flex justify-between items-center">
-                <h2 class="font-bold text-lg text-white">联机玩家</h2>
-                <button id="close-players" class="text-neutral hover:text-white">
-                    <i class="fa fa-times"></i>
+                <h2 class="text-xl font-bold flex items-center">
+                    <i class="fa fa-flask text-primary mr-2"></i>科技树
+                </h2>
+                <button id="close-tech" class="text-gray-400 hover:text-white">
+                    <i class="fa fa-times text-xl"></i>
                 </button>
             </div>
-            <div class="flex-1 overflow-y-auto p-4">
-                <div class="space-y-3">
-                    <div class="flex items-center p-3 bg-primary/50 rounded">
-                        <img src="https://picsum.photos/id/1005/48/48" alt="玩家1头像" class="w-10 h-10 rounded-full border-2 border-accent">
-                        <div class="ml-3">
-                            <div class="font-medium">玩家1 (你)</div>
-                            <div class="text-sm text-neutral">德国 - 在线</div>
+            <div class="p-4 overflow-y-auto flex-1">
+                <div class="mb-6">
+                    <h3 class="text-lg font-bold mb-3 text-primary">军事科技</h3>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="tech-node bg-gray-800 rounded p-3 border border-gray-700">
+                            <div class="font-bold">步兵武器 I</div>
+                            <div class="text-sm text-gray-400 mb-2">研究时间: 60天</div>
+                            <p class="text-xs">提升步兵攻击力10%</p>
+                            <button class="mt-2 w-full bg-primary/80 hover:bg-primary text-xs py-1 rounded">开始研究</button>
                         </div>
-                        <div class="ml-auto">
-                            <span class="bg-success text-white text-xs px-2 py-1 rounded-full">准备就绪</span>
+                        <div class="tech-node bg-gray-800 rounded p-3 border border-gray-700">
+                            <div class="font-bold">轻型坦克 I</div>
+                            <div class="text-sm text-gray-400 mb-2">研究时间: 120天</div>
+                            <p class="text-xs">解锁轻型坦克部队</p>
+                            <button class="mt-2 w-full bg-gray-700 text-gray-400 text-xs py-1 rounded cursor-not-allowed">需要前置科技</button>
                         </div>
-                    </div>
-                    <div class="flex items-center p-3 bg-primary/50 rounded">
-                        <img src="https://picsum.photos/id/1012/48/48" alt="玩家2头像" class="w-10 h-10 rounded-full">
-                        <div class="ml-3">
-                            <div class="font-medium">玩家2</div>
-                            <div class="text-sm text-neutral">苏联 - 在线</div>
-                        </div>
-                        <div class="ml-auto">
-                            <span class="bg-success text-white text-xs px-2 py-1 rounded-full">准备就绪</span>
-                        </div>
-                    </div>
-                    <div class="flex items-center p-3 bg-primary/50 rounded">
-                        <img src="https://picsum.photos/id/1025/48/48" alt="玩家3头像" class="w-10 h-10 rounded-full">
-                        <div class="ml-3">
-                            <div class="font-medium">玩家3</div>
-                            <div class="text-sm text-neutral">英国 - 在线</div>
-                        </div>
-                        <div class="ml-auto">
-                            <span class="bg-success text-white text-xs px-2 py-1 rounded-full">准备就绪</span>
+                        <div class="tech-node bg-gray-800 rounded p-3 border border-gray-700">
+                            <div class="font-bold">基本战术</div>
+                            <div class="text-sm text-gray-400 mb-2">研究时间: 90天</div>
+                            <p class="text-xs">提升所有部队组织度</p>
+                            <button class="mt-2 w-full bg-primary/80 hover:bg-primary text-xs py-1 rounded">开始研究</button>
                         </div>
                     </div>
-                    <div class="flex items-center p-3 bg-primary/50 rounded">
-                        <img src="https://picsum.photos/id/1074/48/48" alt="玩家4头像" class="w-10 h-10 rounded-full">
-                        <div class="ml-3">
-                            <div class="font-medium">玩家4</div>
-                            <div class="text-sm text-neutral">美国 - 在线</div>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="text-lg font-bold mb-3 text-primary">工业科技</h3>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="tech-node bg-gray-800 rounded p-3 border border-gray-700">
+                            <div class="font-bold">基础工业</div>
+                            <div class="text-sm text-gray-400 mb-2">研究时间: 150天</div>
+                            <p class="text-xs">提升工业产能20%</p>
+                            <button class="mt-2 w-full bg-primary/80 hover:bg-primary text-xs py-1 rounded">开始研究</button>
                         </div>
-                        <div class="ml-auto">
-                            <span class="bg-warning text-white text-xs px-2 py-1 rounded-full">未准备</span>
+                        <div class="tech-node bg-gray-800 rounded p-3 border border-gray-700">
+                            <div class="font-bold">铁路建设</div>
+                            <div class="text-sm text-gray-400 mb-2">研究时间: 120天</div>
+                            <p class="text-xs">提升部队移动速度</p>
+                            <button class="mt-2 w-full bg-primary/80 hover:bg-primary text-xs py-1 rounded">开始研究</button>
                         </div>
                     </div>
-                    <div class="flex items-center p-3 bg-primary/50 rounded opacity-50">
-                        <img src="https://picsum.photos/id/1066/48/48" alt="空位" class="w-10 h-10 rounded-full">
-                        <div class="ml-3">
-                            <div class="font-medium">空位</div>
-                            <div class="text-sm text-neutral">可选择国家</div>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-bold mb-3 text-primary">政治科技</h3>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="tech-node bg-gray-800 rounded p-3 border border-gray-700">
+                            <div class="font-bold">宣传工作</div>
+                            <div class="text-sm text-gray-400 mb-2">研究时间: 90天</div>
+                            <p class="text-xs">提升民众支持度和征兵效率</p>
+                            <button class="mt-2 w-full bg-primary/80 hover:bg-primary text-xs py-1 rounded">开始研究</button>
+                        </div>
+                        <div class="tech-node bg-gray-800 rounded p-3 border border-gray-700">
+                            <div class="font-bold">外交技巧</div>
+                            <div class="text-sm text-gray-400 mb-2">研究时间: 180天</div>
+                            <p class="text-xs">改善与其他势力的关系</p>
+                            <button class="mt-2 w-full bg-primary/80 hover:bg-primary text-xs py-1 rounded">开始研究</button>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="p-4 border-t border-gray-700">
-                <button id="start-game" class="w-full bg-accent text-white py-2 rounded btn-hover">
-                    开始游戏 (等待玩家4准备)
-                </button>
+        </div>
+    </div>
+
+    <!-- 开局选择模态框 -->
+    <div id="start-modal" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center">
+        <div class="bg-dark border border-gray-700 rounded-lg w-3/4 max-w-2xl p-6">
+            <h2 class="text-2xl font-bold mb-4 text-primary text-center">红色黎明 - 中国战略模拟</h2>
+            <p class="text-center mb-6">选择你的初始省份，领导共产党走向胜利</p>
+            
+            <div class="mb-6">
+                <h3 class="text-lg font-bold mb-3">选择起始省份</h3>
+                <div class="grid grid-cols-3 gap-2">
+                    <button class="start-province bg-gray-800 hover:bg-primary/80 p-3 rounded text-center transition-colors" data-province="shaanxi">
+                        <div>陕西省</div>
+                        <div class="text-xs text-gray-400">延安根据地</div>
+                    </button>
+                    <button class="start-province bg-gray-800 hover:bg-primary/80 p-3 rounded text-center transition-colors" data-province="gansu">
+                        <div>甘肃省</div>
+                        <div class="text-xs text-gray-400">稳固后方</div>
+                    </button>
+                    <button class="start-province bg-gray-800 hover:bg-primary/80 p-3 rounded text-center transition-colors" data-province="shandong">
+                        <div>山东省</div>
+                        <div class="text-xs text-gray-400">敌后战场</div>
+                    </button>
+                </div>
             </div>
+            
+            <div class="mb-6">
+                <h3 class="text-lg font-bold mb-3">游戏难度</h3>
+                <div class="flex space-x-3">
+                    <button class="difficulty-btn bg-gray-800 hover:bg-primary/80 px-4 py-2 rounded flex-1 transition-colors" data-difficulty="easy">
+                        简单
+                    </button>
+                    <button class="difficulty-btn bg-gray-800 hover:bg-primary/80 px-4 py-2 rounded flex-1 transition-colors" data-difficulty="normal">
+                        普通
+                    </button>
+                    <button class="difficulty-btn bg-gray-800 hover:bg-primary/80 px-4 py-2 rounded flex-1 transition-colors" data-difficulty="hard">
+                        困难
+                    </button>
+                </div>
+            </div>
+            
+            <button id="start-game" class="btn-action w-full">
+                开始游戏
+            </button>
         </div>
     </div>
 
     <script>
-        // 游戏状态管理
+        // 中国省份数据
+        const provinces = [
+            { id: 'hebei', name: '河北省', x: 7, y: 3, resources: { industry: 15, food: 60, manpower: 1800000 } },
+            { id: 'shanxi', name: '山西省', x: 6, y: 4, resources: { industry: 10, food: 40, manpower: 1200000 } },
+            { id: 'shaanxi', name: '陕西省', x: 5, y: 5, resources: { industry: 8, food: 35, manpower: 1000000 } },
+            { id: 'gansu', name: '甘肃省', x: 4, y: 6, resources: { industry: 5, food: 25, manpower: 800000 } },
+            { id: 'qinghai', name: '青海省', x: 4, y: 7, resources: { industry: 3, food: 15, manpower: 500000 } },
+            { id: 'xinjiang', name: '新疆维吾尔自治区', x: 2, y: 7, resources: { industry: 4, food: 20, manpower: 700000 } },
+            { id: 'neimenggu', name: '内蒙古自治区', x: 7, y: 5, resources: { industry: 6, food: 30, manpower: 600000 } },
+            { id: 'liaoning', name: '辽宁省', x: 9, y: 3, resources: { industry: 20, food: 45, manpower: 1500000 } },
+            { id: 'jilin', name: '吉林省', x: 10, y: 3, resources: { industry: 12, food: 50, manpower: 1100000 } },
+            { id: 'heilongjiang', name: '黑龙江省', x: 11, y: 3, resources: { industry: 10, food: 55, manpower: 900000 } },
+            { id: 'shandong', name: '山东省', x: 8, y: 4, resources: { industry: 18, food: 70, manpower: 2000000 } },
+            { id: 'jiangsu', name: '江苏省', x: 8, y: 5, resources: { industry: 25, food: 65, manpower: 2200000 } },
+            { id: 'zhejiang', name: '浙江省', x: 9, y: 6, resources: { industry: 20, food: 50, manpower: 1600000 } },
+            { id: 'anhui', name: '安徽省', x: 7, y: 5, resources: { industry: 12, food: 60, manpower: 1500000 } },
+            { id: 'fujian', name: '福建省', x: 10, y: 7, resources: { industry: 10, food: 40, manpower: 1100000 } },
+            { id: 'jiangxi', name: '江西省', x: 8, y: 6, resources: { industry: 8, food: 55, manpower: 1300000 } },
+            { id: 'hubei', name: '湖北省', x: 7, y: 6, resources: { industry: 15, food: 60, manpower: 1700000 } },
+            { id: 'hunan', name: '湖南省', x: 7, y: 7, resources: { industry: 12, food: 65, manpower: 1600000 } },
+            { id: 'guangdong', name: '广东省', x: 9, y: 8, resources: { industry: 22, food: 50, manpower: 2100000 } },
+            { id: 'guangxi', name: '广西壮族自治区', x: 8, y: 8, resources: { industry: 8, food: 45, manpower: 1200000 } },
+            { id: 'hainan', name: '海南省', x: 10, y: 9, resources: { industry: 5, food: 30, manpower: 600000 } },
+            { id: 'sichuan', name: '四川省', x: 5, y: 8, resources: { industry: 18, food: 70, manpower: 2500000 } },
+            { id: 'guizhou', name: '贵州省', x: 6, y: 8, resources: { industry: 6, food: 40, manpower: 1000000 } },
+            { id: 'yunnan', name: '云南省', x: 6, y: 9, resources: { industry: 7, food: 45, manpower: 1100000 } },
+            { id: 'xizang', name: '西藏自治区', x: 3, y: 9, resources: { industry: 2, food: 10, manpower: 300000 } },
+            { id: 'beijing', name: '北京市', x: 7, y: 3, resources: { industry: 30, food: 20, manpower: 800000 } },
+            { id: 'shanghai', name: '上海市', x: 8, y: 5, resources: { industry: 40, food: 10, manpower: 1000000 } },
+            { id: 'tianjin', name: '天津市', x: 7, y: 3, resources: { industry: 25, food: 15, manpower: 700000 } },
+            { id: 'chongqing', name: '重庆市', x: 5, y: 8, resources: { industry: 20, food: 30, manpower: 1200000 } }
+        ];
+
+        // 游戏状态
         const gameState = {
-            date: { year: 1936, month: 1, day: 1 },
-            speed: 1, // 1=正常, 2=快速, 3=超快速
-            isPaused: false,
-            zoomLevel: 1,
-            players: [
-                { id: 1, name: "玩家1", country: "德国", ready: true, online: true, isYou: true },
-                { id: 2, name: "玩家2", country: "苏联", ready: true, online: true },
-                { id: 3, name: "玩家3", country: "英国", ready: true, online: true },
-                { id: 4, name: "玩家4", country: "美国", ready: false, online: true }
-            ],
-            selectedProvince: "berlin"
+            date: new Date(1936, 0, 1),
+            speed: 1, // 1x, 2x, 3x, 4x
+            running: false,
+            selectedProvince: null,
+            ownedProvinces: [],
+            resources: {
+                industry: 12,
+                food: 45,
+                manpower: 1250000,
+                money: 3200
+            },
+            difficulty: 'normal',
+            currentMap: 'china', // china or asia
+            zoom: 1,
+            events: [],
+            generals: [],
+            militaryUnits: []
         };
 
-        // WebSocket连接模拟
-        class WebSocketMock {
-            constructor(url) {
-                this.url = url;
-                this.connected = false;
-                this.callbacks = {
-                    onopen: null,
-                    onmessage: null,
-                    onclose: null,
-                    onerror: null
-                };
-                
-                // 模拟连接建立
-                setTimeout(() => {
-                    this.connected = true;
-                    if (this.callbacks.onopen) this.callbacks.onopen();
-                }, 1000);
-            }
-            
-            send(data) {
-                if (!this.connected) return;
-                
-                // 模拟服务器响应
-                setTimeout(() => {
-                    if (this.callbacks.onmessage) {
-                        // 根据发送的数据类型，模拟不同的响应
-                        const message = JSON.parse(data);
-                        let response;
-                        
-                        if (message.type === "chat") {
-                            response = {
-                                type: "chat",
-                                data: {
-                                    user: "系统",
-                                    message: `已收到你的消息: ${message.data.message}`
-                                }
-                            };
-                        } else if (message.type === "gameAction") {
-                            response = {
-                                type: "gameAction",
-                                data: {
-                                    success: true,
-                                    message: "操作已同步给所有玩家"
-                                }
-                            };
-                        }
-                        
-                        if (response) {
-                            this.callbacks.onmessage({ data: JSON.stringify(response) });
-                        }
-                    }
-                }, 500);
-            }
-            
-            close() {
-                this.connected = false;
-                if (this.callbacks.onclose) this.callbacks.onclose();
-            }
-            
-            onopen(callback) {
-                this.callbacks.onopen = callback;
-            }
-            
-            onmessage(callback) {
-                this.callbacks.onmessage = callback;
-            }
-            
-            onclose(callback) {
-                this.callbacks.onclose = callback;
-            }
-            
-            onerror(callback) {
-                this.callbacks.onerror = callback;
-            }
-        }
+        // DOM 元素
+        const elements = {
+            mapContainer: document.getElementById('map-container'),
+            map: document.getElementById('map'),
+            chinaMap: document.getElementById('china-map'),
+            provinceInfo: document.getElementById('province-info'),
+            gameDate: document.getElementById('game-date'),
+            resourceIndustry: document.getElementById('resource-industry'),
+            resourceFood: document.getElementById('resource-food'),
+            resourceManpower: document.getElementById('resource-manpower'),
+            resourceMoney: document.getElementById('resource-money'),
+            btnSpeed: document.getElementById('btn-speed'),
+            btnTech: document.getElementById('btn-tech'),
+            techModal: document.getElementById('tech-modal'),
+            closeTech: document.getElementById('close-tech'),
+            startModal: document.getElementById('start-modal'),
+            startGame: document.getElementById('start-game'),
+            startProvinces: document.querySelectorAll('.start-province'),
+            difficultyBtns: document.querySelectorAll('.difficulty-btn'),
+            zoomIn: document.getElementById('zoom-in'),
+            zoomOut: document.getElementById('zoom-out'),
+            mapChina: document.getElementById('map-china'),
+            mapAsia: document.getElementById('map-asia')
+        };
 
-        // 初始化WebSocket连接
-        let socket;
-        
-        function initWebSocket() {
-            // 实际环境中应替换为真实的WebSocket服务器地址
-            socket = new WebSocketMock('ws://localhost:8080/game');
-            
-            socket.onopen(() => {
-                console.log('WebSocket连接已建立');
-                document.getElementById('connection-status').textContent = '已连接';
-                document.getElementById('connection-status').className = 'text-success';
+        // 初始化省份
+        function initializeProvinces() {
+            provinces.forEach(province => {
+                const provinceElement = document.createElement('div');
+                provinceElement.id = `province-${province.id}`;
+                provinceElement.className = `province bg-map-neutral col-start-${province.x} row-start-${province.y} col-span-1 row-span-1 relative`;
+                provinceElement.title = province.name;
+                provinceElement.dataset.id = province.id;
                 
-                // 连接成功后加入游戏
-                socket.send(JSON.stringify({
-                    type: "join",
-                    data: {
-                        playerId: gameState.players[0].id,
-                        country: gameState.players[0].country
-                    }
-                }));
-            });
-            
-            socket.onmessage(event => {
-                const message = JSON.parse(event.data);
-                handleServerMessage(message);
-            });
-            
-            socket.onclose(() => {
-                console.log('WebSocket连接已关闭');
-                document.getElementById('connection-status').textContent = '已断开';
-                document.getElementById('connection-status').className = 'text-secondary';
+                // 添加省份名称标签
+                const nameLabel = document.createElement('div');
+                nameLabel.className = 'absolute bottom-0 left-0 right-0 bg-black/50 text-xs p-0.5 text-center truncate';
+                nameLabel.textContent = province.name;
+                provinceElement.appendChild(nameLabel);
                 
-                // 尝试重连
-                setTimeout(initWebSocket, 5000);
-            });
-            
-            socket.onerror(error => {
-                console.error('WebSocket错误:', error);
-                document.getElementById('connection-status').textContent = '错误';
-                document.getElementById('connection-status').className = 'text-warning';
+                // 添加点击事件
+                provinceElement.addEventListener('click', () => selectProvince(province.id));
+                
+                elements.chinaMap.appendChild(provinceElement);
             });
         }
 
-        // 处理服务器消息
-        function handleServerMessage(message) {
-            switch (message.type) {
-                case "chat":
-                    addChatMessage(message.data.user, message.data.message, false);
-                    break;
-                case "gameAction":
-                    showNotification(message.data.message);
-                    break;
-                case "playerUpdate":
-                    updatePlayerStatus(message.data);
-                    break;
-                case "event":
-                    showEventNotification(message.data);
-                    break;
-            }
-        }
-
-        // 发送聊天消息
-        function sendChatMessage() {
-            const input = document.getElementById('chat-input');
-            const message = input.value.trim();
-            
-            if (message && socket.connected) {
-                // 添加到本地聊天界面
-                addChatMessage("我", message, true);
-                
-                // 发送到服务器
-                socket.send(JSON.stringify({
-                    type: "chat",
-                    data: {
-                        message: message,
-                        playerId: gameState.players[0].id
-                    }
-                }));
-                
-                input.value = '';
-            }
-        }
-
-        // 添加聊天消息到界面
-        function addChatMessage(user, message, isOwn) {
-            const chatContainer = document.getElementById('chat-messages');
-            const messageDiv = document.createElement('div');
-            
-            if (isOwn) {
-                messageDiv.className = 'flex justify-end';
-                messageDiv.innerHTML = `
-                    <div class="mr-2 text-right">
-                        <div class="text-xs font-semibold">${user}</div>
-                        <div class="text-sm bg-accent/80 p-2 rounded max-w-[80%]">
-                            ${message}
-                        </div>
-                    </div>
-                    <img src="https://picsum.photos/id/1005/32/32" alt="${user}头像" class="w-6 h-6 rounded-full">
-                `;
-            } else {
-                messageDiv.className = 'flex';
-                const avatarId = user === "玩家2" ? 1012 : user === "玩家3" ? 1025 : 1074;
-                messageDiv.innerHTML = `
-                    <img src="https://picsum.photos/id/${avatarId}/32/32" alt="${user}头像" class="w-6 h-6 rounded-full">
-                    <div class="ml-2">
-                        <div class="text-xs font-semibold">${user}</div>
-                        <div class="text-sm bg-primary/50 p-2 rounded max-w-[80%]">
-                            ${message}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        // 更新游戏日期
-        function updateDate() {
-            if (gameState.isPaused) return;
-            
-            // 根据游戏速度调整日期增量
-            const daysToAdd = gameState.speed;
-            
-            gameState.date.day += daysToAdd;
-            
-            // 处理月份变更
-            const daysInMonth = new Date(gameState.date.year, gameState.date.month, 0).getDate();
-            if (gameState.date.day > daysInMonth) {
-                gameState.date.day -= daysInMonth;
-                gameState.date.month += 1;
-                
-                // 处理年份变更
-                if (gameState.date.month > 12) {
-                    gameState.date.month = 1;
-                    gameState.date.year += 1;
-                    
-                    // 每年触发一次事件
-                    if (Math.random() > 0.3) {
-                        triggerRandomEvent();
+        // 选择省份
+        function selectProvince(provinceId) {
+            // 取消之前的选择
+            if (gameState.selectedProvince) {
+                const prevProvince = document.getElementById(`province-${gameState.selectedProvince}`);
+                if (prevProvince) {
+                    if (gameState.ownedProvinces.includes(gameState.selectedProvince)) {
+                        prevProvince.classList.remove('bg-map-selected');
+                        prevProvince.classList.add('bg-map-owned');
+                    } else {
+                        prevProvince.classList.remove('bg-map-selected');
+                        prevProvince.classList.add('bg-map-neutral');
                     }
                 }
             }
             
-            // 更新显示
-            document.getElementById('game-date').textContent = 
-                `${gameState.date.year}年${gameState.date.month}月${gameState.date.day}日`;
-        }
-
-        // 切换游戏暂停状态
-        function togglePause() {
-            gameState.isPaused = !gameState.isPaused;
-            const pauseBtn = document.getElementById('pause-btn');
-            const playPauseBtn = document.getElementById('play-pause');
-            
-            if (gameState.isPaused) {
-                pauseBtn.innerHTML = '<i class="fa fa-play mr-1"></i>继续';
-                playPauseBtn.innerHTML = '<i class="fa fa-play mr-1"></i>已暂停';
-            } else {
-                pauseBtn.innerHTML = '<i class="fa fa-pause mr-1"></i>暂停';
-                updateSpeedDisplay();
+            // 设置新选择
+            gameState.selectedProvince = provinceId;
+            const province = document.getElementById(`province-${provinceId}`);
+            if (province) {
+                province.classList.remove('bg-map-owned', 'bg-map-neutral', 'bg-map-enemy');
+                province.classList.add('bg-map-selected');
             }
-        }
-
-        // 调整游戏速度
-        function changeSpeed(direction) {
-            gameState.speed = Math.max(1, Math.min(3, gameState.speed + direction));
-            updateSpeedDisplay();
-        }
-
-        // 更新速度显示
-        function updateSpeedDisplay() {
-            const playPauseBtn = document.getElementById('play-pause');
-            let speedText = "正常速度";
             
-            if (gameState.speed === 2) speedText = "快速";
-            if (gameState.speed === 3) speedText = "超快速";
+            // 更新省份信息面板
+            updateProvinceInfo(provinceId);
+        }
+
+        // 更新省份信息面板
+        function updateProvinceInfo(provinceId) {
+            const province = provinces.find(p => p.id === provinceId);
+            if (!province) return;
             
-            playPauseBtn.innerHTML = `<i class="fa fa-play mr-1"></i>${speedText}`;
+            const isOwned = gameState.ownedProvinces.includes(provinceId);
+            
+            elements.provinceInfo.innerHTML = `
+                <div class="font-bold text-lg">${province.name}</div>
+                <div class="text-sm text-gray-400 mb-2">
+                    ${isOwned ? '<span class="text-green-500"><i class="fa fa-check-circle"></i> 我方控制</span>' : 
+                      '<span class="text-yellow-500"><i class="fa fa-minus-circle"></i> 中立</span>'}
+                </div>
+                <div class="space-y-1 text-sm">
+                    <div class="flex justify-between">
+                        <span><i class="fa fa-industry text-gray-400 mr-1"></i> 工业</span>
+                        <span>${province.resources.industry}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span><i class="fa fa-wheat text-gray-400 mr-1"></i> 粮食</span>
+                        <span>${province.resources.food}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span><i class="fa fa-users text-gray-400 mr-1"></i> 人口</span>
+                        <span>${province.resources.manpower.toLocaleString()}</span>
+                    </div>
+                </div>
+                ${isOwned ? `
+                    <div class="mt-3 space-y-2">
+                        <button class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs py-1 rounded">
+                            <i class="fa fa-wrench mr-1"></i> 建设
+                        </button>
+                        <button class="w-full bg-green-600 hover:bg-green-700 text-white text-xs py-1 rounded">
+                            <i class="fa fa-user-plus mr-1"></i> 征兵
+                        </button>
+                    </div>
+                ` : `
+                    <div class="mt-3">
+                        <button class="w-full bg-gray-600 hover:bg-gray-500 text-white text-xs py-1 rounded" ${!canConquerProvince(provinceId) ? 'disabled' : ''}>
+                            <i class="fa fa-flag mr-1"></i> 占领
+                        </button>
+                    </div>
+                `}
+            `;
         }
 
-        // 地图缩放控制
-        function zoomMap(direction) {
-            gameState.zoomLevel = Math.max(0.5, Math.min(2, gameState.zoomLevel + direction * 0.1));
-            document.getElementById('map-container').style.transform = `scale(${gameState.zoomLevel})`;
-        }
-
-        // 重置地图视图
-        function resetMapView() {
-            gameState.zoomLevel = 1;
-            document.getElementById('map-container').style.transform = `scale(1)`;
-        }
-
-        // 显示玩家面板
-        function showPlayersPanel() {
-            document.getElementById('players-panel').classList.remove('hidden');
-        }
-
-        // 隐藏玩家面板
-        function hidePlayersPanel() {
-            document.getElementById('players-panel').classList.add('hidden');
-        }
-
-        // 更新玩家状态
-        function updatePlayerStatus(playerData) {
-            const player = gameState.players.find(p => p.id === playerData.id);
-            if (player) {
-                player.ready = playerData.ready;
-                player.online = playerData.online;
+        // 检查是否可以占领省份
+        function canConquerProvince(provinceId) {
+            // 简单逻辑：检查是否有相邻的已拥有省份
+            const province = provinces.find(p => p.id === provinceId);
+            if (!province) return false;
+            
+            return gameState.ownedProvinces.some(ownedId => {
+                const ownedProvince = provinces.find(p => p.id === ownedId);
+                if (!ownedProvince) return false;
                 
-                // 更新UI...
-                updateStartButtonStatus();
+                // 检查是否相邻（简单的坐标检查）
+                const dx = Math.abs(ownedProvince.x - province.x);
+                const dy = Math.abs(ownedProvince.y - province.y);
+                return dx <= 1 && dy <= 1 && !(dx === 0 && dy === 0);
+            });
+        }
+
+        // 更新游戏日期显示
+        function updateDateDisplay() {
+            const year = gameState.date.getFullYear();
+            const month = gameState.date.getMonth() + 1;
+            const day = gameState.date.getDate();
+            elements.gameDate.textContent = `${year}年${month}月${day}日`;
+        }
+
+        // 更新资源显示
+        function updateResourcesDisplay() {
+            elements.resourceIndustry.textContent = `工业: ${gameState.resources.industry}`;
+            elements.resourceFood.textContent = `粮食: ${gameState.resources.food}`;
+            elements.resourceManpower.textContent = `人力: ${gameState.resources.manpower.toLocaleString()}`;
+            elements.resourceMoney.textContent = `资金: ${gameState.resources.money}`;
+        }
+
+        // 推进游戏时间
+        function advanceTime() {
+            if (!gameState.running) return;
+            
+            // 根据速度推进不同的天数
+            const daysToAdd = gameState.speed;
+            gameState.date.setDate(gameState.date.getDate() + daysToAdd);
+            
+            // 每天更新
+            updateDateDisplay();
+            
+            // 每月更新资源
+            if (gameState.date.getDate() === 1) {
+                updateMonthlyResources();
+                checkMonthlyEvents();
+            }
+            
+            // 继续计时
+            setTimeout(advanceTime, 1000 / gameState.speed);
+        }
+
+        // 更新月度资源
+        function updateMonthlyResources() {
+            // 计算所有拥有省份的资源总和
+            let industryGain = 0;
+            let foodGain = 0;
+            let manpowerGain = 0;
+            
+            gameState.ownedProvinces.forEach(provinceId => {
+                const province = provinces.find(p => p.id === provinceId);
+                if (province) {
+                    industryGain += province.resources.industry;
+                    foodGain += province.resources.food;
+                    manpowerGain += Math.floor(province.resources.manpower * 0.01); // 1%的人口增长
+                }
+            });
+            
+            // 根据难度调整
+            if (gameState.difficulty === 'hard') {
+                industryGain *= 0.8;
+                foodGain *= 0.8;
+            } else if (gameState.difficulty === 'easy') {
+                industryGain *= 1.2;
+                foodGain *= 1.2;
+                manpowerGain *= 1.2;
+            }
+            
+            // 更新资源
+            gameState.resources.industry += Math.floor(industryGain);
+            gameState.resources.food += Math.floor(foodGain);
+            gameState.resources.manpower += Math.floor(manpowerGain);
+            
+            // 资金根据工业产出计算
+            gameState.resources.money += Math.floor(industryGain * 50);
+            
+            // 确保资源不为负
+            if (gameState.resources.food < 0) gameState.resources.food = 0;
+            
+            // 更新显示
+            updateResourcesDisplay();
+        }
+
+        // 检查月度事件
+        function checkMonthlyEvents() {
+            // 这里可以添加事件触发逻辑
+            console.log('Checking for monthly events...');
+        }
+
+        // 切换游戏速度
+        function toggleSpeed() {
+            const speeds = [1, 2, 3, 4, 0]; // 0 表示暂停
+            const speedLabels = ['1x', '2x', '3x', '4x', '暂停'];
+            const speedIcons = ['fa-play', 'fa-forward', 'fa-forward', 'fa-forward', 'fa-pause'];
+            
+            // 找到当前速度的索引
+            let currentIndex = speeds.indexOf(gameState.speed);
+            currentIndex = (currentIndex + 1) % speeds.length;
+            
+            // 更新速度
+            gameState.speed = speeds[currentIndex];
+            gameState.running = gameState.speed > 0;
+            
+            // 更新按钮显示
+            elements.btnSpeed.innerHTML = `<i class="fa ${speedIcons[currentIndex]} mr-1"></i>${speedLabels[currentIndex]}`;
+            
+            // 如果开始运行，启动时间推进
+            if (gameState.running) {
+                advanceTime();
             }
         }
 
-        // 更新开始按钮状态
-        function updateStartButtonStatus() {
-            const allReady = gameState.players.every(p => !p.online || p.ready);
-            const startBtn = document.getElementById('start-game');
+        // 缩放地图
+        function zoomMap(amount) {
+            gameState.zoom = Math.max(0.5, Math.min(2, gameState.zoom + amount));
+            elements.map.style.transform = `translate(-50%, -50%) scale(${gameState.zoom})`;
+        }
+
+        // 切换地图
+        function switchMap(mapType) {
+            gameState.currentMap = mapType;
             
-            if (allReady) {
-                startBtn.textContent = "开始游戏";
-                startBtn.disabled = false;
-                startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            if (mapType === 'china') {
+                elements.mapChina.style.display = 'grid';
+                elements.mapAsia.style.display = 'none';
+                elements.mapChina.classList.add('map-grid');
+                elements.mapAsia.classList.remove('map-grid');
+                elements.mapChina.classList.remove('hidden');
+                elements.mapAsia.classList.add('hidden');
+                
+                elements.mapChina.classList.add('opacity-100');
+                elements.mapAsia.classList.add('opacity-0');
+                
+                elements.mapChina.style.pointerEvents = 'auto';
+                elements.mapAsia.style.pointerEvents = 'none';
+                
+                elements.mapChina.classList.remove('hidden');
+                elements.mapAsia.classList.add('hidden');
+                
+                elements.mapChina.classList.add('block');
+                elements.mapAsia.classList.remove('block');
+                
+                elements.mapChina.classList.add('opacity-100');
+                elements.mapAsia.classList.add('opacity-0');
+                
+                elements.mapChina.style.pointerEvents = 'auto';
+                elements.mapAsia.style.pointerEvents = 'none';
+                
+                elements.mapChina.classList.remove('hidden');
+                elements.mapAsia.classList.add('hidden');
+                
+                elements.mapChina.classList.add('block');
+                elements.mapAsia.classList.remove('block');
+                
+                elements.mapChina.classList.add('opacity-100');
+                elements.mapAsia.classList.add('opacity-0');
+                
+                elements.mapChina.style.pointerEvents = 'auto';
+                elements.mapAsia.style.pointerEvents = 'none';
+                
+                elements.mapChina.classList.remove('hidden');
+                elements.mapAsia.classList.add('hidden');
+                
+                elements.mapChina.classList.add('block');
+                elements.mapAsia.classList.remove('block');
+                
+                elements.mapChina.classList.add('opacity-100');
+                elements.mapAsia.classList.add('opacity-0');
+                
+                elements.mapChina.style.pointerEvents = 'auto';
+                elements.mapAsia.style.pointerEvents = 'none';
             } else {
-                const notReady = gameState.players.filter(p => p.online && !p.ready).map(p => p.name).join(', ');
-                startBtn.textContent = `开始游戏 (等待${notReady}准备)`;
-                startBtn.disabled = true;
-                startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                // 亚洲地图逻辑
+                elements.mapChina.style.display = 'none';
+                elements.mapAsia.style.display = 'grid';
+                elements.mapAsia.classList.add('map-grid');
+                elements.mapChina.classList.remove('map-grid');
+                
+                elements.mapChina.classList.add('opacity-0');
+                elements.mapAsia.classList.add('opacity-100');
+                
+                elements.mapChina.style.pointerEvents = 'none';
+                elements.mapAsia.style.pointerEvents = 'auto';
             }
+            
+            // 更新按钮状态
+            elements.mapChina.classList.toggle('bg-primary/20', mapType === 'china');
+            elements.mapAsia.classList.toggle('bg-primary/20', mapType === 'asia');
         }
 
-        // 显示事件通知
-        function showEventNotification(eventData) {
-            const eventPanel = document.getElementById('event-notification');
-            eventPanel.querySelector('p').textContent = eventData.message;
-            eventPanel.classList.remove('hidden');
+        // 开始游戏
+        function startGame() {
+            // 隐藏开始模态框
+            elements.startModal.classList.add('hidden');
             
-            // 自动隐藏
-            setTimeout(() => {
-                eventPanel.classList.add('hidden');
-            }, 10000);
+            // 启动游戏时间
+            gameState.running = true;
+            advanceTime();
         }
 
-        // 触发随机事件
-        function triggerRandomEvent() {
-            const events = [
-                { message: "国内工业生产效率提升，产能增加5%" },
-                { message: "新的军事技术研发成功，陆军战斗力提升" },
-                { message: "外交使团取得突破，与邻国关系改善" },
-                { message: "经济危机爆发，国库收入减少10%" },
-                { message: "民众支持度上升，国家凝聚力增强" }
-            ];
+        // 初始化事件监听
+        function initializeEventListeners() {
+            // 速度按钮
+            elements.btnSpeed.addEventListener('click', toggleSpeed);
             
-            const randomEvent = events[Math.floor(Math.random() * events.length)];
-            showEventNotification(randomEvent);
-            
-            // 同步事件到所有玩家
-            if (socket.connected) {
-                socket.send(JSON.stringify({
-                    type: "event",
-                    data: randomEvent
-                }));
-            }
-        }
-
-        // 显示通用通知
-        function showNotification(message) {
-            // 可以实现一个浮动通知系统
-            console.log("通知:", message);
-        }
-
-        // 初始化事件监听器
-        function initEventListeners() {
-            // 暂停/继续按钮
-            document.getElementById('pause-btn').addEventListener('click', togglePause);
-            document.getElementById('play-pause').addEventListener('click', togglePause);
-            
-            // 速度控制
-            document.getElementById('speed-up').addEventListener('click', () => changeSpeed(1));
-            document.getElementById('speed-down').addEventListener('click', () => changeSpeed(-1));
-            
-            // 地图控制
-            document.getElementById('zoom-in').addEventListener('click', () => zoomMap(1));
-            document.getElementById('zoom-out').addEventListener('click', () => zoomMap(-1));
-            document.getElementById('reset-view').addEventListener('click', resetMapView);
-            
-            // 聊天功能
-            document.getElementById('send-chat').addEventListener('click', sendChatMessage);
-            document.getElementById('chat-input').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') sendChatMessage();
+            // 科技按钮
+            elements.btnTech.addEventListener('click', () => {
+                elements.techModal.classList.remove('hidden');
             });
             
-            // 玩家面板
-            document.querySelectorAll('a[href="#"]:contains("联机玩家")').forEach(link => {
-                link.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    showPlayersPanel();
+            // 关闭科技模态框
+            elements.closeTech.addEventListener('click', () => {
+                elements.techModal.classList.add('hidden');
+            });
+            
+            // 开始游戏按钮
+            elements.startGame.addEventListener('click', startGame);
+            
+            // 选择起始省份
+            elements.startProvinces.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // 移除其他按钮的选中状态
+                    elements.startProvinces.forEach(b => b.classList.remove('bg-primary/80'));
+                    // 添加当前按钮的选中状态
+                    btn.classList.add('bg-primary/80');
+                    
+                    // 设置初始省份
+                    const provinceId = btn.dataset.province;
+                    gameState.ownedProvinces = [provinceId];
+                    
+                    // 更新地图显示
+                    const provinceElement = document.getElementById(`province-${provinceId}`);
+                    if (provinceElement) {
+                        provinceElement.classList.remove('bg-map-neutral');
+                        provinceElement.classList.add('bg-map-owned');
+                    }
+                    
+                    // 选中该省份
+                    selectProvince(provinceId);
                 });
             });
-            document.getElementById('close-players').addEventListener('click', hidePlayersPanel);
             
-            // 关闭事件通知
-            document.querySelector('.close-event').addEventListener('click', () => {
-                document.getElementById('event-notification').classList.add('hidden');
-            });
-            
-            // 省份点击
-            document.querySelectorAll('[data-province]').forEach(province => {
-                province.addEventListener('click', () => {
-                    gameState.selectedProvince = province.getAttribute('data-province');
-                    // 这里可以添加省份详情更新逻辑
+            // 选择难度
+            elements.difficultyBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // 移除其他按钮的选中状态
+                    elements.difficultyBtns.forEach(b => b.classList.remove('bg-primary/80'));
+                    // 添加当前按钮的选中状态
+                    btn.classList.add('bg-primary/80');
+                    
+                    // 设置难度
+                    gameState.difficulty = btn.dataset.difficulty;
                 });
             });
+            
+            // 地图缩放
+            elements.zoomIn.addEventListener('click', () => zoomMap(0.2));
+            elements.zoomOut.addEventListener('click', () => zoomMap(-0.2));
+            
+            // 切换地图
+            elements.mapChina.addEventListener('click', () => switchMap('china'));
+            elements.mapAsia.addEventListener('click', () => switchMap('asia'));
+            
+            // 默认选中第一个起始省份和普通难度
+            if (elements.startProvinces.length > 0) {
+                elements.startProvinces[0].click();
+            }
+            if (elements.difficultyBtns.length > 1) {
+                elements.difficultyBtns[1].click();
+            }
         }
 
         // 初始化游戏
-        function initGame() {
-            initWebSocket();
-            initEventListeners();
-            
-            // 启动日期更新定时器
-            setInterval(updateDate, 1000);
-            
-            // 模拟随机事件
-            setTimeout(triggerRandomEvent, 15000);
+        function initializeGame() {
+            initializeProvinces();
+            initializeEventListeners();
+            updateDateDisplay();
+            updateResourcesDisplay();
         }
 
-        // 当页面加载完成后初始化游戏
-        window.addEventListener('load', initGame);
+        // 启动游戏
+        window.addEventListener('DOMContentLoaded', initializeGame);
     </script>
 </body>
 </html>
