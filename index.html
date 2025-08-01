@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>红色曙光 - 简易版</title>
+    <title>中国铁路模拟器（修复版）</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script>
@@ -11,11 +11,11 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#C41E3A',
-                        our: '#22c55e',      // 我方控制
-                        enemy: '#ef4444',    // 敌方控制
-                        neutral: '#f59e0b',  // 中立区域
-                        unknown: '#64748b'   // 未知区域
+                        primary: '#C92127', // 铁路红色
+                        highspeed: '#1E40AF', // 高铁蓝色
+                        normal: '#6B7280',    // 普通铁轨灰色
+                        station: '#F59E0B',   // 车站橙色
+                        depot: '#10B981',     // 停车场绿色
                     }
                 }
             }
@@ -23,616 +23,2688 @@
     </script>
     <style type="text/tailwindcss">
         @layer utilities {
-            .province-sphere {
-                @apply rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-all duration-200 hover:scale-110 shadow-lg z-10;
+            .content-auto {
+                content-visibility: auto;
             }
-            .province-sphere-selected {
-                @apply ring-4 ring-primary scale-125 z-20;
+            .map-grid {
+                background-size: 50px 50px;
+                background-image: 
+                    linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px);
             }
-            .btn-action {
-                @apply flex-1 py-2 rounded text-sm transition-all duration-200 flex items-center justify-center;
+            .train-ready {
+                animation: pulse 1.5s infinite;
+            }
+            @keyframes pulse {
+                0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
+                70% { box-shadow: 0 0 0 6px rgba(255, 215, 0, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+            }
+            .event-alert {
+                animation: shake 0.5s;
+                animation-iteration-count: 3;
+            }
+            @keyframes shake {
+                0% { transform: translate(1px, 1px) rotate(0deg); }
+                10% { transform: translate(-1px, -2px) rotate(-1deg); }
+                20% { transform: translate(-3px, 0px) rotate(1deg); }
+                30% { transform: translate(3px, 2px) rotate(0deg); }
+                40% { transform: translate(1px, -1px) rotate(1deg); }
+                50% { transform: translate(-1px, 2px) rotate(-1deg); }
+                60% { transform: translate(-3px, 1px) rotate(0deg); }
+                70% { transform: translate(3px, 1px) rotate(-1deg); }
+                80% { transform: translate(-1px, -1px) rotate(1deg); }
+                90% { transform: translate(1px, 2px) rotate(0deg); }
+                100% { transform: translate(1px, -2px) rotate(-1deg); }
+            }
+            .city-label {
+                text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+                pointer-events: none;
             }
             .tooltip {
-                @apply invisible absolute bg-black/90 text-white text-xs rounded py-1 px-2 whitespace-nowrap opacity-0 transition-opacity duration-200 z-50;
+                position: relative;
             }
-            .has-tooltip:hover .tooltip {
-                @apply visible opacity-100;
+            .tooltip:hover::after {
+                content: attr(data-tooltip);
+                position: absolute;
+                bottom: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                background-color: rgba(0, 0, 0, 0.8);
+                color: white;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 12px;
+                white-space: nowrap;
+                z-index: 100;
             }
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white h-screen overflow-hidden flex flex-col">
-    <!-- 顶部状态栏 -->
-    <header class="bg-gray-800 py-2 px-4 flex justify-between items-center border-b border-gray-700">
+<body class="bg-gray-800 text-gray-100 min-h-screen flex flex-col overflow-hidden">
+    <!-- 顶部导航栏 -->
+    <header class="bg-gray-700 border-b border-gray-600 py-2 px-4 flex justify-between items-center">
         <div class="flex items-center">
-            <h1 class="text-xl font-bold text-primary mr-6">红色曙光</h1>
-            <div class="flex space-x-4 text-sm">
-                <div><i class="fa fa-calendar-o mr-1 text-primary"></i><span id="game-date">1936年7月</span></div>
-                <div><i class="fa fa-users mr-1 text-our"></i><span>人口: <span id="population">520万</span></span></div>
-                <div><i class="fa fa-industry mr-1 text-blue-400"></i><span>工业: <span id="industry">12</span></span></div>
-                <div><i class="fa fa-shield mr-1 text-yellow-400"></i><span>军队: <span id="army">8.5万</span></span></div>
+            <div class="text-primary text-xl md:text-2xl font-bold flex items-center">
+                <i class="fa fa-train mr-2"></i>
+                <span>中国铁路模拟器</span>
             </div>
         </div>
-        
-        <div class="flex items-center space-x-3">
-            <button id="btn-speed" class="p-2 hover:bg-gray-700 rounded transition-colors has-tooltip">
-                <i class="fa fa-play"></i>
-                <span class="tooltip">开始/暂停</span>
+        <div class="flex items-center space-x-4">
+            <div class="flex items-center bg-gray-600 rounded-full px-3 py-1">
+                <i class="fa fa-money text-green-400 mr-1"></i>
+                <span id="funds-display">¥80,000,000</span>
+            </div>
+            <div class="flex items-center bg-gray-600 rounded-full px-3 py-1">
+                <i class="fa fa-clock-o text-yellow-400 mr-1"></i>
+                <span id="game-date">2023年1月1日</span>
+            </div>
+            <button id="save-button" class="bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded text-sm transition-colors tooltip" data-tooltip="保存游戏">
+                <i class="fa fa-save mr-1"></i> 保存
             </button>
-            <button id="btn-menu" class="p-2 hover:bg-gray-700 rounded transition-colors has-tooltip">
-                <i class="fa fa-bars"></i>
-                <span class="tooltip">菜单</span>
+            <button id="load-button" class="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm transition-colors tooltip" data-tooltip="加载游戏">
+                <i class="fa fa-load mr-1"></i> 加载
             </button>
         </div>
     </header>
 
     <!-- 主游戏区域 -->
-    <div class="flex flex-1 overflow-hidden">
-        <!-- 中央地图区域 - 球体地图 -->
-        <div class="flex-1 relative overflow-hidden bg-gray-900">
-            <!-- 地图切换 -->
-            <div class="absolute top-4 left-4 z-10 flex space-x-2">
-                <button id="map-china" class="bg-primary hover:bg-primary/80 text-white px-3 py-1 rounded text-sm transition-colors">
-                    中国
+    <main class="flex-1 flex flex-col md:flex-row overflow-hidden">
+        <!-- 左侧工具栏 -->
+        <div class="bg-gray-700 border-r border-gray-600 w-full md:w-56 p-2 flex flex-wrap md:flex-col gap-2 z-10">
+            <button id="tool-select" class="flex-1 md:flex-none bg-primary text-white py-2 px-3 rounded flex items-center justify-center">
+                <i class="fa fa-mouse-pointer mr-2"></i> 选择
+            </button>
+            <button id="tool-station" class="flex-1 md:flex-none bg-gray-600 hover:bg-gray-500 py-2 px-3 rounded flex items-center justify-center transition-colors">
+                <i class="fa fa-building mr-2"></i> 车站
+            </button>
+            <button id="tool-depot" class="flex-1 md:flex-none bg-gray-600 hover:bg-gray-500 py-2 px-3 rounded flex items-center justify-center transition-colors">
+                <i class="fa fa-warehouse mr-2"></i> 停车场
+            </button>
+            <button id="tool-track" class="flex-1 md:flex-none bg-gray-600 hover:bg-gray-500 py-2 px-3 rounded flex items-center justify-center transition-colors">
+                <i class="fa fa-railway mr-2"></i> 普通铁轨
+            </button>
+            <button id="tool-highspeed" class="flex-1 md:flex-none bg-gray-600 hover:bg-gray-500 py-2 px-3 rounded flex items-center justify-center transition-colors">
+                <i class="fa fa-bolt mr-2"></i> 高铁铁轨
+            </button>
+            <button id="tool-train" class="flex-1 md:flex-none bg-gray-600 hover:bg-gray-500 py-2 px-3 rounded flex items-center justify-center transition-colors">
+                <i class="fa fa-train mr-2"></i> 列车
+            </button>
+            <button id="tool-remove" class="flex-1 md:flex-none bg-gray-600 hover:bg-gray-500 py-2 px-3 rounded flex items-center justify-center transition-colors">
+                <i class="fa fa-trash mr-2"></i> 拆除
+            </button>
+            
+            <div class="w-full md:mt-4 pt-3 border-t border-gray-600">
+                <h3 class="font-semibold mb-2 text-gray-300 text-sm">列车类型</h3>
+                <button data-train-type="passenger" class="add-train-btn w-full bg-gray-600 hover:bg-gray-500 py-2 px-3 rounded flex items-center justify-start mb-2 transition-colors text-sm">
+                    <i class="fa fa-users mr-2"></i> 客运列车
                 </button>
-                <button id="map-asia" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm transition-colors">
-                    亚洲
+                <button data-train-type="express" class="add-train-btn w-full bg-gray-600 hover:bg-gray-500 py-2 px-3 rounded flex items-center justify-start mb-2 transition-colors text-sm">
+                    <i class="fa fa-bolt mr-2"></i> 高铁列车
                 </button>
+                <button data-train-type="inspection" class="add-train-btn w-full bg-gray-600 hover:bg-gray-500 py-2 px-3 rounded flex items-center justify-start mb-2 transition-colors text-sm">
+                    <i class="fa fa-wrench mr-2"></i> 动检列车
+                </button>
+                <button data-train-type="track" class="add-train-btn w-full bg-gray-600 hover:bg-gray-500 py-2 px-3 rounded flex items-center justify-start transition-colors text-sm">
+                    <i class="fa fa-search mr-2"></i> 轨检列车
+                </button>
+            </div>
+            
+            <div class="w-full md:mt-4 pt-3 border-t border-gray-600">
+                <button id="events-button" class="w-full bg-gray-600 hover:bg-gray-500 py-2 px-3 rounded flex items-center justify-between transition-colors">
+                    <span><i class="fa fa-exclamation-circle mr-2"></i> 事件</span>
+                    <span id="event-count" class="hidden bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 中央地图区域 -->
+        <div class="flex-1 relative overflow-hidden bg-gray-800">
+            <div id="map-container" class="absolute inset-0 map-grid cursor-default" style="transform-origin: 0 0;">
+                <!-- 地图底图 - 修复为更明亮的颜色 -->
+                <div id="map-terrain" class="absolute inset-0 bg-[#1e293b] opacity-90"></div>
+                
+                <!-- 城市标签层 -->
+                <div id="cities-container" class="absolute inset-0 pointer-events-none z-10"></div>
+                
+                <!-- 铁轨容器 - 确保在元素下方但可见 -->
+                <svg class="absolute inset-0 z-20" id="tracks-svg"></svg>
+                <svg class="absolute inset-0 z-20" id="track-preview-svg"></svg>
+                
+                <!-- 地图元素容器 - 确保在铁轨上方，可点击 -->
+                <div id="map-elements" class="absolute inset-0 z-30"></div>
+            </div>
+            
+            <!-- 操作提示 -->
+            <div id="action-tooltip" class="hidden absolute bg-gray-800/90 px-3 py-2 rounded text-sm shadow-lg z-100">
+                提示信息
+            </div>
+            
+            <!-- 调度提示 -->
+            <div id="dispatch-hint" class="hidden absolute bg-primary/90 px-3 py-2 rounded text-sm shadow-lg z-100">
+                点击终点站发车
             </div>
             
             <!-- 缩放控制 -->
-            <div class="absolute top-4 right-4 z-10 bg-gray-800/80 rounded p-1">
-                <button id="zoom-in" class="p-1 hover:bg-gray-700 rounded transition-colors has-tooltip">
-                    <i class="fa fa-search-plus"></i>
-                    <span class="tooltip">放大</span>
+            <div class="absolute bottom-4 right-4 bg-gray-700 rounded-lg shadow-lg p-1 z-100">
+                <button id="zoom-in" class="w-8 h-8 flex items-center justify-center hover:bg-gray-600 rounded">
+                    <i class="fa fa-plus"></i>
                 </button>
-                <button id="zoom-out" class="p-1 hover:bg-gray-700 rounded transition-colors has-tooltip">
-                    <i class="fa fa-search-minus"></i>
-                    <span class="tooltip">缩小</span>
+                <div class="border-t border-gray-600 my-0.5"></div>
+                <button id="zoom-out" class="w-8 h-8 flex items-center justify-center hover:bg-gray-600 rounded">
+                    <i class="fa fa-minus"></i>
                 </button>
             </div>
             
-            <!-- 地图说明 -->
-            <div class="absolute bottom-4 left-4 z-10 bg-gray-800/80 rounded p-2 text-xs">
-                <div class="flex items-center mb-1">
-                    <div class="w-3 h-3 bg-our rounded-full mr-2"></div>
-                    <span>我方</span>
-                </div>
-                <div class="flex items-center mb-1">
-                    <div class="w-3 h-3 bg-enemy rounded-full mr-2"></div>
-                    <span>敌方</span>
-                </div>
-                <div class="flex items-center">
-                    <div class="w-3 h-3 bg-neutral rounded-full mr-2"></div>
-                    <span>中立</span>
-                </div>
-            </div>
-            
-            <!-- 中国球体地图容器 -->
-            <div id="china-map" class="w-full h-full relative">
-                <!-- 地图背景网格 -->
-                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgcGF0dGVyblRyYW5zZm9ybT0icm90YXRlKDQ1KSI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IiMyMDIwMjAiIHN0cm9rZS13aWR0aD0iMSIvPjwvcmVjdD48cmVjdCB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzIwMjAyMCIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9yZWN0PjwvcGF0dGVybj48L2RlZnM+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==')]"></div>
-                
-                <!-- 球体代表各省份，按地理方位排列 -->
-                <!-- 东北区域 -->
-                <div class="province-sphere absolute w-8 h-8 bg-enemy" style="left: 20%; top: 20%" data-province="heilongjiang" data-name="黑龙江省">
-                    <span class="has-tooltip">黑<span class="tooltip">黑龙江省 (敌方)</span></span>
-                </div>
-                <div class="province-sphere absolute w-8 h-8 bg-enemy" style="left: 25%; top: 25%" data-province="jilin" data-name="吉林省">
-                    <span class="has-tooltip">吉<span class="tooltip">吉林省 (敌方)</span></span>
-                </div>
-                <div class="province-sphere absolute w-8 h-8 bg-enemy" style="left: 30%; top: 28%" data-province="liaoning" data-name="辽宁省">
-                    <span class="has-tooltip">辽<span class="tooltip">辽宁省 (敌方)</span></span>
-                </div>
-                
-                <!-- 华北区域 -->
-                <div class="province-sphere absolute w-8 h-8 bg-enemy" style="left: 35%; top: 30%" data-province="hebei" data-name="河北省">
-                    <span class="has-tooltip">冀<span class="tooltip">河北省 (敌方)</span></span>
-                </div>
-                <div class="province-sphere absolute w-10 h-10 bg-enemy" style="left: 40%; top: 30%" data-province="beijing" data-name="北京市">
-                    <span class="has-tooltip">京<span class="tooltip">北京市 (敌方)</span></span>
-                </div>
-                <div class="province-sphere absolute w-8 h-8 bg-neutral" style="left: 38%; top: 38%" data-province="shanxi" data-name="山西省">
-                    <span class="has-tooltip">晋<span class="tooltip">山西省 (中立)</span></span>
-                </div>
-                
-                <!-- 西北区域 -->
-                <div class="province-sphere absolute w-8 h-8 bg-our" style="left: 25%; top: 50%" data-province="shaanxi" data-name="陕西省">
-                    <span class="has-tooltip">陕<span class="tooltip">陕西省 (我方)</span></span>
-                </div>
-                <div class="province-sphere absolute w-8 h-8 bg-neutral" style="left: 20%; top: 60%" data-province="gansu" data-name="甘肃省">
-                    <span class="has-tooltip">甘<span class="tooltip">甘肃省 (中立)</span></span>
-                </div>
-                
-                <!-- 华东区域 -->
-                <div class="province-sphere absolute w-8 h-8 bg-neutral" style="left: 50%; top: 35%" data-province="shandong" data-name="山东省">
-                    <span class="has-tooltip">鲁<span class="tooltip">山东省 (中立)</span></span>
-                </div>
-                <div class="province-sphere absolute w-8 h-8 bg-enemy" style="left: 55%; top: 40%" data-province="jiangsu" data-name="江苏省">
-                    <span class="has-tooltip">苏<span class="tooltip">江苏省 (敌方)</span></span>
-                </div>
-                <div class="province-sphere absolute w-8 h-8 bg-enemy" style="left: 60%; top: 42%" data-province="zhejiang" data-name="浙江省">
-                    <span class="has-tooltip">浙<span class="tooltip">浙江省 (敌方)</span></span>
-                </div>
-                <div class="province-sphere absolute w-10 h-10 bg-our province-sphere-selected" style="left: 50%; top: 50%" data-province="jiangxi" data-name="江西省">
-                    <span class="has-tooltip">赣<span class="tooltip">江西省 (我方)</span></span>
-                </div>
-                <div class="province-sphere absolute w-8 h-8 bg-neutral" style="left: 65%; top: 50%" data-province="fujian" data-name="福建省">
-                    <span class="has-tooltip">闽<span class="tooltip">福建省 (中立)</span></span>
-                </div>
-                
-                <!-- 中南区域 -->
-                <div class="province-sphere absolute w-8 h-8 bg-neutral" style="left: 45%; top: 58%" data-province="hubei" data-name="湖北省">
-                    <span class="has-tooltip">鄂<span class="tooltip">湖北省 (中立)</span></span>
-                </div>
-                <div class="province-sphere absolute w-8 h-8 bg-our" style="left: 50%; top: 65%" data-province="hunan" data-name="湖南省">
-                    <span class="has-tooltip">湘<span class="tooltip">湖南省 (我方)</span></span>
-                </div>
-                <div class="province-sphere absolute w-8 h-8 bg-enemy" style="left: 60%; top: 60%" data-province="guangdong" data-name="广东省">
-                    <span class="has-tooltip">粤<span class="tooltip">广东省 (敌方)</span></span>
-                </div>
-                <div class="province-sphere absolute w-8 h-8 bg-neutral" style="left: 38%; top: 70%" data-province="henan" data-name="河南省">
-                    <span class="has-tooltip">豫<span class="tooltip">河南省 (中立)</span></span>
-                </div>
-                
-                <!-- 西南区域 -->
-                <div class="province-sphere absolute w-8 h-8 bg-our" style="left: 35%; top: 65%" data-province="sichuan" data-name="四川省">
-                    <span class="has-tooltip">川<span class="tooltip">四川省 (我方)</span></span>
-                </div>
-                <div class="province-sphere absolute w-8 h-8 bg-neutral" style="left: 40%; top: 78%" data-province="guizhou" data-name="贵州省">
-                    <span class="has-tooltip">黔<span class="tooltip">贵州省 (中立)</span></span>
-                </div>
-                <div class="province-sphere absolute w-8 h-8 bg-neutral" style="left: 45%; top: 85%" data-province="yunnan" data-name="云南省">
-                    <span class="has-tooltip">滇<span class="tooltip">云南省 (中立)</span></span>
-                </div>
-            </div>
-            
-            <!-- 亚洲球体地图容器 (默认隐藏) -->
-            <div id="asia-map" class="w-full h-full relative hidden">
-                <!-- 地图背景网格 -->
-                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgcGF0dGVyblRyYW5zZm9ybT0icm90YXRlKDQ1KSI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IiMyMDIwMjAiIHN0cm9rZS13aWR0aD0iMSIvPjwvcmVjdD48cmVjdCB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzIwMjAyMCIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9yZWN0PjwvcGF0dGVybj48L2RlZnM+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==')]"></div>
-                
-                <!-- 亚洲主要国家球体 -->
-                <div class="province-sphere absolute w-16 h-16 bg-our" style="left: 50%; top: 50%" data-name="中国">
-                    <span class="has-tooltip">中<span class="tooltip">中国</span></span>
-                </div>
-                <div class="province-sphere absolute w-12 h-12 bg-enemy" style="left: 65%; top: 40%" data-name="日本">
-                    <span class="has-tooltip">日<span class="tooltip">日本 (敌方)</span></span>
-                </div>
-                <div class="province-sphere absolute w-10 h-10 bg-neutral" style="left: 30%; top: 40%" data-name="苏联">
-                    <span class="has-tooltip">苏<span class="tooltip">苏联 (中立)</span></span>
-                </div>
-                <div class="province-sphere absolute w-10 h-10 bg-neutral" style="left: 60%; top: 65%" data-name="印度">
-                    <span class="has-tooltip">印<span class="tooltip">印度 (中立)</span></span>
-                </div>
+            <!-- 地图重置按钮 -->
+            <div class="absolute bottom-4 left-4 bg-gray-700 rounded-lg shadow-lg p-1 z-100">
+                <button id="reset-map" class="w-8 h-8 flex items-center justify-center hover:bg-gray-600 rounded tooltip" data-tooltip="重置地图视图">
+                    <i class="fa fa-home"></i>
+                </button>
             </div>
         </div>
 
-        <!-- 右侧面板 - 合并所有核心功能 -->
-        <div class="w-64 bg-gray-800 border-l border-gray-700 flex flex-col">
-            <!-- 当前选中省份信息 -->
-            <div class="p-3 border-b border-gray-700">
-                <h3 class="font-bold text-primary" id="panel-province-name">江西省</h3>
-                <div class="text-sm text-gray-300 mt-1">
-                    <div class="flex justify-between mb-1">
-                        <span>人口</span>
-                        <span id="panel-population">130万</span>
-                    </div>
-                    <div class="flex justify-between mb-1">
-                        <span>工业</span>
-                        <span id="panel-industry">3</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>军队</span>
-                        <span id="panel-army">1.5万</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 快速操作按钮 -->
-            <div class="p-2 grid grid-cols-2 gap-2 border-b border-gray-700">
-                <button id="btn-build" class="btn-action bg-blue-700 hover:bg-blue-600">
-                    <i class="fa fa-wrench mr-1"></i> 建设
-                </button>
-                <button id="btn-recruit" class="btn-action bg-green-700 hover:bg-green-600">
-                    <i class="fa fa-shield mr-1"></i> 征兵
-                </button>
-                <button id="btn-research" class="btn-action bg-purple-700 hover:bg-purple-600">
-                    <i class="fa fa-flask mr-1"></i> 研发
-                </button>
-                <button id="btn-attack" class="btn-action bg-red-700 hover:bg-red-600">
-                    <i class="fa fa-crosshairs mr-1"></i> 进攻
-                </button>
-            </div>
-            
-            <!-- 信息面板 - 自动切换内容 -->
-            <div class="flex-1 overflow-y-auto p-3">
-                <div id="info-events" class="space-y-2">
-                    <h4 class="text-sm font-bold text-yellow-400 mb-2">当前事件</h4>
-                    
-                    <div class="bg-gray-700/50 p-2 rounded text-sm">
-                        <div class="font-bold">西安事变</div>
-                        <div class="text-xs text-gray-300 mt-1">张学良和杨虎城发动"兵谏"，扣押蒋介石</div>
-                        <button class="w-full mt-2 bg-primary/80 hover:bg-primary text-xs py-1 rounded">
-                            处理
-                        </button>
-                    </div>
-                    
-                    <div class="bg-gray-700/50 p-2 rounded text-sm mt-2">
-                        <div class="font-bold">七七事变临近</div>
-                        <div class="text-xs text-gray-300 mt-1">预计1937年7月发生，日军可能全面侵华</div>
+        <!-- 右侧信息面板 -->
+        <div class="bg-gray-700 border-l border-gray-600 w-full md:w-72 p-3 hidden md:block overflow-y-auto max-h-[calc(100vh-60px)] z-10">
+            <div id="info-panel">
+                <h3 class="font-semibold text-lg mb-3 border-b border-gray-600 pb-2">操作指南</h3>
+                
+                <div class="mb-4">
+                    <div class="bg-gray-600 rounded p-3 text-sm space-y-2">
+                        <p><span class="text-primary font-bold">1.</span> 游戏从深圳开始，已为您提供两个高铁站和一个停车场</p>
+                        <p><span class="text-primary font-bold">2.</span> 建造车站：点击"车站"按钮，在地图任意位置点击</p>
+                        <p><span class="text-primary font-bold">3.</span> 建造铁轨：选择铁轨类型，点击两个站点连接</p>
+                        <p><span class="text-primary font-bold">4.</span> 停车场可直接连接铁轨，用于停放列车</p>
+                        <p><span class="text-primary font-bold">5.</span> 发车：点击列车，再点击终点站，列车将出发</p>
                     </div>
                 </div>
                 
-                <div id="info-generals" class="space-y-2 hidden">
-                    <h4 class="text-sm font-bold text-yellow-400 mb-2">我方将领</h4>
-                    
-                    <div class="bg-gray-700/50 p-2 rounded text-sm flex items-center">
-                        <div class="w-8 h-8 bg-our rounded-full flex items-center justify-center mr-2">彭</div>
-                        <div>
-                            <div>彭德怀</div>
-                            <div class="text-xs text-gray-300">攻击:85 防御:78</div>
+                <div class="mb-4">
+                    <h4 class="text-gray-300 text-sm mb-1">当前状态</h4>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-gray-600 rounded p-2 text-center">
+                            <p class="text-xl font-bold text-yellow-400" id="station-count">2</p>
+                            <p class="text-xs">车站</p>
                         </div>
-                    </div>
-                    
-                    <div class="bg-gray-700/50 p-2 rounded text-sm flex items-center mt-2">
-                        <div class="w-8 h-8 bg-our rounded-full flex items-center justify-center mr-2">朱</div>
-                        <div>
-                            <div>朱德</div>
-                            <div class="text-xs text-gray-300">攻击:76 防御:82</div>
+                        <div class="bg-gray-600 rounded p-2 text-center">
+                            <p class="text-xl font-bold text-green-400" id="depot-count">1</p>
+                            <p class="text-xs">停车场</p>
+                        </div>
+                        <div class="bg-gray-600 rounded p-2 text-center">
+                            <p class="text-xl font-bold text-blue-400" id="train-count">0</p>
+                            <p class="text-xs">列车</p>
+                        </div>
+                        <div class="bg-gray-600 rounded p-2 text-center">
+                            <p class="text-xl font-bold text-purple-400" id="track-count">1</p>
+                            <p class="text-xs">铁轨段</p>
                         </div>
                     </div>
                 </div>
                 
-                <div id="info-tech" class="space-y-2 hidden">
-                    <h4 class="text-sm font-bold text-yellow-400 mb-2">科技研发</h4>
-                    
-                    <div class="bg-gray-700/50 p-2 rounded text-sm">
-                        <div class="flex justify-between">
-                            <span>轻型 artillery</span>
-                            <span class="text-yellow-400 text-xs">62%</span>
-                        </div>
-                        <div class="w-full bg-gray-600 rounded-full h-1 mt-1">
-                            <div class="bg-yellow-400 h-1 rounded-full" style="width: 62%"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-gray-700/50 p-2 rounded text-sm mt-2 hover:bg-gray-600/50 cursor-pointer">
-                        <div class="flex justify-between">
-                            <span>游击战战术</span>
-                            <span class="text-gray-400 text-xs">点击研发</span>
-                        </div>
+                <div>
+                    <h4 class="text-gray-300 text-sm mb-1">通知</h4>
+                    <div id="notification-area" class="bg-gray-600 rounded p-2 text-sm max-h-40 overflow-y-auto">
+                        <p class="text-gray-300 italic">欢迎来到中国铁路模拟器！</p>
+                        <p class="text-gray-300 italic">已为您提供：深圳北站、广州南站和深圳北停车场</p>
                     </div>
                 </div>
             </div>
             
-            <!-- 底部切换按钮 -->
-            <div class="flex border-t border-gray-700">
-                <button id="tab-events" class="flex-1 py-2 text-center text-xs border-b-2 border-yellow-500 text-yellow-500">
-                    <i class="fa fa-flag mr-1"></i> 事件
+            <!-- 车站信息面板 -->
+            <div id="station-panel" class="hidden">
+                <h3 class="font-semibold text-lg mb-3 border-b border-gray-600 pb-2">车站信息</h3>
+                <div class="mb-3">
+                    <label class="block text-gray-300 mb-1 text-sm">车站名称</label>
+                    <input type="text" id="station-name" class="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-gray-300 mb-1 text-sm">车站类型</label>
+                    <select id="station-type" class="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm">
+                        <option value="normal">普通车站</option>
+                        <option value="highspeed">高铁车站</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <h4 class="text-gray-300 text-sm mb-1">停靠列车</h4>
+                    <div id="station-trains" class="space-y-1 max-h-32 overflow-y-auto pr-1 text-sm">
+                        <p class="text-gray-400 italic">暂无列车停靠</p>
+                    </div>
+                </div>
+                <button id="save-station" class="w-full bg-primary hover:bg-primary/80 text-white py-2 rounded transition-colors">
+                    保存
                 </button>
-                <button id="tab-generals" class="flex-1 py-2 text-center text-xs border-b-2 border-transparent text-gray-400 hover:text-gray-300">
-                    <i class="fa fa-user mr-1"></i> 将领
+            </div>
+            
+            <!-- 停车场信息面板 -->
+            <div id="depot-panel" class="hidden">
+                <h3 class="font-semibold text-lg mb-3 border-b border-gray-600 pb-2">停车场信息</h3>
+                <div class="mb-3">
+                    <label class="block text-gray-300 mb-1 text-sm">停车场名称</label>
+                    <input type="text" id="depot-name" class="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm">
+                </div>
+                <div class="mb-3">
+                    <h4 class="text-gray-300 text-sm mb-1">停放列车</h4>
+                    <div id="depot-trains" class="space-y-1 max-h-32 overflow-y-auto pr-1 text-sm">
+                        <p class="text-gray-400 italic">暂无列车</p>
+                    </div>
+                </div>
+                <button id="add-train-to-depot" class="w-full bg-secondary hover:bg-secondary/80 text-white py-2 rounded transition-colors mb-2">
+                    添加列车
                 </button>
-                <button id="tab-tech" class="flex-1 py-2 text-center text-xs border-b-2 border-transparent text-gray-400 hover:text-gray-300">
-                    <i class="fa fa-flask mr-1"></i> 科技
+                <button id="save-depot" class="w-full bg-primary hover:bg-primary/80 text-white py-2 rounded transition-colors">
+                    保存
+                </button>
+            </div>
+            
+            <!-- 列车信息面板 -->
+            <div id="train-panel" class="hidden">
+                <h3 class="font-semibold text-lg mb-3 border-b border-gray-600 pb-2">列车信息</h3>
+                <div class="mb-2">
+                    <label class="block text-gray-300 mb-1 text-sm">列车编号</label>
+                    <input type="text" id="train-number" class="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm" readonly>
+                </div>
+                <div class="mb-2">
+                    <label class="block text-gray-300 mb-1 text-sm">类型</label>
+                    <input type="text" id="train-type" class="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm" readonly>
+                </div>
+                <div class="mb-2">
+                    <label class="block text-gray-300 mb-1 text-sm">状态</label>
+                    <input type="text" id="train-status" class="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-gray-300 mb-1 text-sm">当前位置</label>
+                    <input type="text" id="train-location" class="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm" readonly>
+                </div>
+                <button id="dispatch-train-btn" class="w-full bg-primary hover:bg-primary/80 text-white py-2 rounded transition-colors">
+                    调度列车
+                </button>
+            </div>
+            
+            <!-- 事件面板 -->
+            <div id="event-panel" class="hidden">
+                <h3 class="font-semibold text-lg mb-3 border-b border-gray-600 pb-2">事件详情</h3>
+                <div id="event-details" class="bg-gray-600 rounded p-3 text-sm mb-4">
+                    <!-- 事件内容将动态填充 -->
+                </div>
+                <div class="flex space-x-2">
+                    <button id="event-handle" class="flex-1 bg-primary hover:bg-primary/80 text-white py-2 rounded transition-colors">
+                        处理
+                    </button>
+                    <button id="event-ignore" class="flex-1 bg-gray-600 hover:bg-gray-500 text-white py-2 rounded transition-colors">
+                        忽略
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 事件通知弹窗（移动端） -->
+    <div id="event-modal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-500 hidden">
+        <div class="bg-gray-700 rounded-lg shadow-xl w-full max-w-md p-4">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg font-bold">特殊事件</h3>
+                <button id="close-event-modal" class="text-gray-300 hover:text-white">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div id="mobile-event-details" class="bg-gray-600 rounded p-3 text-sm mb-4">
+                <!-- 事件内容将动态填充 -->
+            </div>
+            <div class="flex space-x-2">
+                <button id="mobile-event-handle" class="flex-1 bg-primary hover:bg-primary/80 text-white py-2 rounded transition-colors">
+                    处理
+                </button>
+                <button id="mobile-event-ignore" class="flex-1 bg-gray-600 hover:bg-gray-500 text-white py-2 rounded transition-colors">
+                    忽略
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- 快捷操作弹窗 (点击省份后显示) -->
-    <div id="quick-actions" class="fixed bg-gray-800 rounded-lg shadow-xl z-50 w-56 hidden">
-        <div class="p-2 border-b border-gray-700 text-center font-bold" id="action-title">江西省</div>
-        <div class="p-2 grid grid-cols-2 gap-2">
-            <button class="py-2 bg-blue-700 hover:bg-blue-600 rounded text-xs transition-colors">
-                <i class="fa fa-wrench mr-1"></i> 建设工厂
-            </button>
-            <button class="py-2 bg-green-700 hover:bg-green-600 rounded text-xs transition-colors">
-                <i class="fa fa-users mr-1"></i> 招募士兵
-            </button>
-            <button class="py-2 bg-yellow-700 hover:bg-yellow-600 rounded text-xs transition-colors">
-                <i class="fa fa-truck mr-1"></i> 运送资源
-            </button>
-            <button class="py-2 bg-purple-700 hover:bg-purple-600 rounded text-xs transition-colors">
-                <i class="fa fa-file-text mr-1"></i> 发布政策
-            </button>
-        </div>
-    </div>
-
-    <!-- 游戏菜单 (默认隐藏) -->
-    <div id="game-menu" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden">
-        <div class="bg-gray-800 rounded-lg w-56 p-4">
-            <h2 class="text-center font-bold mb-4">游戏菜单</h2>
-            <div class="space-y-2">
-                <button class="w-full py-2 hover:bg-gray-700 rounded text-sm transition-colors">
-                    <i class="fa fa-save mr-2"></i> 保存
+    <!-- 保存/加载确认弹窗 -->
+    <div id="save-load-modal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-500 hidden">
+        <div class="bg-gray-700 rounded-lg shadow-xl w-full max-w-md p-4">
+            <h3 class="text-lg font-bold mb-3" id="save-load-title">保存游戏</h3>
+            <div id="save-load-message" class="text-sm mb-4">
+                确定要保存当前游戏进度吗？
+            </div>
+            <div class="flex space-x-2">
+                <button id="save-load-confirm" class="flex-1 bg-primary hover:bg-primary/80 text-white py-2 rounded transition-colors">
+                    确认
                 </button>
-                <button class="w-full py-2 hover:bg-gray-700 rounded text-sm transition-colors">
-                    <i class="fa fa-refresh mr-2"></i> 重新开始
-                </button>
-                <button class="w-full py-2 hover:bg-gray-700 rounded text-sm transition-colors">
-                    <i class="fa fa-home mr-2"></i> 返回首页
-                </button>
-                <button id="btn-close-menu" class="w-full py-2 mt-4 bg-primary hover:bg-primary/80 rounded text-sm transition-colors">
-                    继续游戏
+                <button id="save-load-cancel" class="flex-1 bg-gray-600 hover:bg-gray-500 text-white py-2 rounded transition-colors">
+                    取消
                 </button>
             </div>
         </div>
-    </div>
-
-    <!-- 游戏提示 -->
-    <div id="game-tip" class="fixed bottom-4 right-4 bg-gray-800/90 backdrop-blur-sm rounded p-3 max-w-xs z-40 text-sm">
-        <div class="font-bold text-yellow-400 mb-1">游戏提示</div>
-        <p>点击绿色球体选择我方省份，使用右侧按钮进行建设和征兵</p>
-        <button id="close-tip" class="absolute top-1 right-1 text-gray-400 hover:text-white">
-            <i class="fa fa-times"></i>
-        </button>
     </div>
 
     <script>
-        // 游戏状态
-        const gameState = {
-            running: false,
-            year: 1936,
-            month: 7,
-            zoomLevel: 1
+        // 中国主要城市数据（坐标基于自定义地图系统）
+        const chinaCities = {
+            // 珠三角地区
+            深圳: { x: 500, y: 500, population: 17560000, importance: 9 },
+            广州: { x: 450, y: 460, population: 15300000, importance: 9 },
+            东莞: { x: 470, y: 480, population: 8464500, importance: 8 },
+            佛山: { x: 440, y: 450, population: 7430600, importance: 8 },
+            珠海: { x: 430, y: 530, population: 2439585, importance: 7 },
+            中山: { x: 445, y: 490, population: 3310000, importance: 7 },
+            惠州: { x: 510, y: 450, population: 6042852, importance: 7 },
+            
+            // 广东省其他城市
+            汕头: { x: 600, y: 420, population: 5502031, importance: 7 },
+            湛江: { x: 380, y: 580, population: 7030900, importance: 6 },
+            韶关: { x: 400, y: 380, population: 2855187, importance: 6 },
+            
+            // 其他主要城市
+            北京: { x: 500, y: 180, population: 21540000, importance: 10 },
+            上海: { x: 650, y: 320, population: 24870000, importance: 10 },
+            天津: { x: 530, y: 220, population: 15596000, importance: 9 },
+            重庆: { x: 300, y: 350, population: 31243000, importance: 9 },
+            成都: { x: 250, y: 380, population: 16330000, importance: 9 },
+            杭州: { x: 680, y: 350, population: 10360000, importance: 8 },
+            南京: { x: 620, y: 340, population: 8436200, importance: 8 },
+            武汉: { x: 480, y: 380, population: 11081000, importance: 8 },
+            西安: { x: 350, y: 280, population: 10003700, importance: 8 },
+            长沙: { x: 500, y: 430, population: 8154700, importance: 7 },
+            郑州: { x: 490, y: 320, population: 10136000, importance: 7 },
+            青岛: { x: 600, y: 250, population: 9394800, importance: 7 },
+            沈阳: { x: 680, y: 180, population: 8316000, importance: 7 },
+            哈尔滨: { x: 720, y: 100, population: 10858000, importance: 6 },
+            昆明: { x: 250, y: 550, population: 6850000, importance: 6 },
+            乌鲁木齐: { x: 50, y: 200, population: 3500000, importance: 6 }
         };
-        
-        // 元素引用
-        const gameDateElement = document.getElementById('game-date');
-        const populationElement = document.getElementById('population');
-        const industryElement = document.getElementById('industry');
-        const armyElement = document.getElementById('army');
-        const provinceSpheres = document.querySelectorAll('.province-sphere');
-        const quickActions = document.getElementById('quick-actions');
-        const actionTitle = document.getElementById('action-title');
-        const gameMenu = document.getElementById('game-menu');
-        const gameTip = document.getElementById('game-tip');
-        
-        // 初始化游戏日期
-        updateGameDate();
-        
-        // 游戏速度控制
-        let gameInterval;
-        document.getElementById('btn-speed').addEventListener('click', () => {
-            if (gameState.running) {
-                // 暂停游戏
-                clearInterval(gameInterval);
-                document.getElementById('btn-speed').innerHTML = '<i class="fa fa-play"></i>';
-            } else {
-                // 开始游戏
-                gameInterval = setInterval(advanceGameTime, 1000);
-                document.getElementById('btn-speed').innerHTML = '<i class="fa fa-pause"></i>';
+
+        // 游戏数据模型
+        const gameData = {
+            funds: 80000000,
+            date: new Date(2023, 0, 1),
+            stations: [],
+            depots: [],
+            tracks: [],
+            trains: [],
+            events: [],
+            nextId: {
+                station: 1,
+                depot: 1,
+                track: 1,
+                train: 1,
+                event: 1
+            },
+            selectedTool: 'select',
+            selectedElement: null,
+            trackBuilding: {
+                inProgress: false,
+                startElement: null,
+                trackType: 'normal'
+            },
+            trainDispatch: {
+                inProgress: false,
+                selectedTrain: null
+            },
+            mapTransform: {
+                scale: 1.5,
+                x: -300,
+                y: -300,
+                isDragging: false,
+                startX: 0,
+                startY: 0,
+                initialScale: 1.5,
+                initialX: -300,
+                initialY: -300
+            },
+            stationCounters: {}
+        };
+
+        // 初始化城市计数器
+        function initStationCounters() {
+            for (const city in chinaCities) {
+                gameData.stationCounters[city] = 1;
             }
-            gameState.running = !gameState.running;
-        });
-        
-        // 推进游戏时间
-        function advanceGameTime() {
-            gameState.month++;
-            if (gameState.month > 12) {
-                gameState.month = 1;
-                gameState.year++;
+        }
+
+        // 获取下一个车站编号
+        function getNextStationNumber(cityName) {
+            if (!gameData.stationCounters[cityName]) {
+                gameData.stationCounters[cityName] = 1;
+            }
+            const number = gameData.stationCounters[cityName];
+            gameData.stationCounters[cityName]++;
+            return number;
+        }
+
+        // 找到最近的城市
+        function findNearestCity(x, y) {
+            let nearestCity = null;
+            let minDistance = Infinity;
+            
+            for (const cityName in chinaCities) {
+                const city = chinaCities[cityName];
+                const distance = Math.hypot(city.x - x, city.y - y);
                 
-                // 每年自动增长
-                autoGrowResources();
+                if (distance < minDistance && distance < 100) {
+                    minDistance = distance;
+                    nearestCity = cityName;
+                }
             }
-            updateGameDate();
             
-            // 随机事件触发
-            if (Math.random() < 0.05) { // 5%概率触发事件
-                showRandomEvent();
+            return nearestCity || '未知地区';
+        }
+
+        // 初始化游戏 - 创建初始停车场和两个高铁站
+        function initGame() {
+            // 初始化城市计数器
+            initStationCounters();
+            
+            // 检查是否有保存的游戏
+            const savedGame = localStorage.getItem('railwaySimulatorSave');
+            if (savedGame) {
+                try {
+                    loadGame(JSON.parse(savedGame));
+                    showNotification('已加载保存的游戏进度');
+                } catch (e) {
+                    console.error('加载保存失败，使用新游戏', e);
+                    startNewGame();
+                }
+            } else {
+                startNewGame();
             }
-        }
-        
-        // 更新游戏日期显示
-        function updateGameDate() {
-            gameDateElement.textContent = `${gameState.year}年${gameState.month}月`;
-        }
-        
-        // 自动增长资源
-        function autoGrowResources() {
-            // 人口增长3%
-            let population = parseInt(populationElement.textContent);
-            population = Math.round(population * 1.03);
-            populationElement.textContent = population + '万';
             
-            // 工业增长5%
-            let industry = parseInt(industryElement.textContent);
-            industry = Math.round(industry * 1.05);
-            industryElement.textContent = industry;
+            // 渲染城市标签
+            renderCities();
             
-            // 军队增长2%
-            let army = parseFloat(armyElement.textContent);
-            army = Math.round(army * 10 * 1.02) / 10;
-            armyElement.textContent = army + '万';
+            // 启动事件生成器
+            startEventGenerator();
+            
+            // 更新UI
+            updateGameUI();
+            
+            // 添加地图交互
+            setupMapInteraction();
         }
         
-        // 显示随机事件
-        function showRandomEvent() {
-            const events = [
-                {title: "粮食丰收", content: "今年收成良好，人口增长加快"},
-                {title: "工业进步", content: "工厂效率提升，工业产值增加"},
-                {title: "新兵入伍", content: "更多青年参军，军队规模扩大"},
-                {title: "民众支持", content: "民众支持度提高，资源收集加快"}
+        // 开始新游戏
+        function startNewGame() {
+            // 创建初始停车场（深圳）
+            addDepot(500, 500, '深圳北停车场');
+            
+            // 创建第一个高铁站（深圳北站）
+            addStation(500, 480, '深圳北站', 'highspeed');
+            
+            // 创建第二个高铁站（广州南站）
+            addStation(450, 460, '广州南站', 'highspeed');
+            
+            // 连接两个高铁站
+            addTrack('station-1', 'station-2', 'highspeed');
+            
+            // 连接深圳北站和停车场
+            addTrack('station-1', 'depot-1', 'highspeed');
+            
+            showNotification('欢迎来到中国铁路模拟器！');
+            showNotification('已为您提供：深圳北站、广州南站和深圳北停车场');
+        }
+
+        // 添加车站
+        function addStation(x, y, customName = null, type = 'normal') {
+            // 确定车站名称
+            let name;
+            const nearestCity = findNearestCity(x, y);
+            
+            if (customName) {
+                name = customName;
+            } else {
+                const stationNumber = getNextStationNumber(nearestCity);
+                name = `${nearestCity}${stationNumber}号站`;
+            }
+            
+            // 根据类型确定成本
+            const cost = type === 'highspeed' ? 3000000 : 1500000;
+            if (gameData.funds < cost) {
+                showNotification(`资金不足，无法建设${type === 'highspeed' ? '高铁' : ''}车站`, 'error');
+                return null;
+            }
+            
+            const station = {
+                id: `station-${gameData.nextId.station}`,
+                x,
+                y,
+                name,
+                type,
+                connections: [],
+                city: nearestCity
+            };
+            
+            gameData.stations.push(station);
+            gameData.nextId.station++;
+            gameData.funds -= cost;
+            
+            showNotification(`已建设${type === 'highspeed' ? '高铁' : ''}车站: ${name}，花费 ¥${cost.toLocaleString()}`);
+            updateStationCount();
+            renderStations();
+            updateFundsDisplay();
+            
+            return station;
+        }
+
+        // 添加停车场
+        function addDepot(x, y, name = null) {
+            const nearestCity = findNearestCity(x, y);
+            const defaultName = name || `${nearestCity}停车场`;
+            const cost = 2000000;
+            
+            if (gameData.funds < cost && gameData.depots.length > 0) {
+                showNotification('资金不足，无法建设停车场', 'error');
+                return null;
+            }
+            
+            const depot = {
+                id: `depot-${gameData.nextId.depot}`,
+                x,
+                y,
+                name: defaultName,
+                connected: false,
+                connections: [],
+                trains: [],
+                city: nearestCity
+            };
+            
+            gameData.depots.push(depot);
+            gameData.nextId.depot++;
+            
+            // 第一个停车场免费
+            if (gameData.depots.length > 1) {
+                gameData.funds -= cost;
+                showNotification(`已建设停车场: ${defaultName}，花费 ¥${cost.toLocaleString()}`);
+            } else {
+                showNotification(`已创建初始停车场: ${defaultName}`);
+            }
+            
+            updateDepotCount();
+            renderDepots();
+            updateFundsDisplay();
+            
+            return depot;
+        }
+
+        // 添加铁轨
+        function addTrack(startId, endId, type = 'normal') {
+            // 检查是否已存在相同的轨道
+            const trackExists = gameData.tracks.some(track => 
+                (track.start === startId && track.end === endId) ||
+                (track.start === endId && track.end === startId)
+            );
+            
+            if (trackExists) {
+                showNotification('这两个站点之间已存在铁轨', 'warning');
+                return null;
+            }
+            
+            // 找到起点和终点元素
+            let startElement, endElement;
+            
+            startElement = gameData.stations.find(s => s.id === startId) || 
+                          gameData.depots.find(d => d.id === startId);
+                          
+            endElement = gameData.stations.find(s => s.id === endId) || 
+                        gameData.depots.find(d => d.id === endId);
+            
+            if (!startElement || !endElement) {
+                showNotification('站点不存在', 'error');
+                return null;
+            }
+            
+            // 检查高铁轨道连接的是否都是高铁车站
+            if (type === 'highspeed') {
+                if (startElement.type && startElement.type !== 'highspeed') {
+                    showNotification('高铁轨道只能连接高铁车站', 'error');
+                    return null;
+                }
+                if (endElement.type && endElement.type !== 'highspeed') {
+                    showNotification('高铁轨道只能连接高铁车站', 'error');
+                    return null;
+                }
+            }
+            
+            const distance = Math.hypot(
+                endElement.x - startElement.x,
+                endElement.y - startElement.y
+            );
+            const cost = Math.round(distance * (type === 'highspeed' ? 500 : 200));
+            
+            if (gameData.funds < cost) {
+                showNotification(`资金不足，无法建设${type === 'highspeed' ? '高铁' : ''}铁轨`, 'error');
+                return null;
+            }
+            
+            const track = {
+                id: `track-${gameData.nextId.track}`,
+                start: startId,
+                end: endId,
+                type,
+                length: distance,
+                condition: 100
+            };
+            
+            gameData.tracks.push(track);
+            gameData.nextId.track++;
+            gameData.funds -= cost;
+            
+            // 更新连接信息
+            startElement.connections.push(endId);
+            endElement.connections.push(startId);
+            
+            // 更新连接状态
+            if (startElement.id.startsWith('depot-')) {
+                startElement.connected = true;
+            }
+            if (endElement.id.startsWith('depot-')) {
+                endElement.connected = true;
+            }
+            
+            showNotification(`已建设${type === 'highspeed' ? '高铁' : ''}铁轨，长度: ${Math.round(distance)}m，花费 ¥${cost.toLocaleString()}`);
+            updateTrackCount();
+            renderTracks();
+            updateFundsDisplay();
+            renderDepots();
+            
+            return track;
+        }
+
+        // 添加列车
+        function addTrain(type, x, y, depotId = null) {
+            let cost, name, icon, allowedTracks;
+            
+            switch(type) {
+                case 'passenger':
+                    cost = 1000000;
+                    name = '客运列车';
+                    icon = 'fa-users';
+                    allowedTracks = ['normal'];
+                    break;
+                case 'express':
+                    cost = 3000000;
+                    name = '高铁列车';
+                    icon = 'fa-bolt';
+                    allowedTracks = ['highspeed'];
+                    break;
+                case 'inspection':
+                    cost = 800000;
+                    name = '动检列车';
+                    icon = 'fa-wrench';
+                    allowedTracks = ['highspeed'];
+                    break;
+                case 'track':
+                    cost = 600000;
+                    name = '轨检列车';
+                    icon = 'fa-search';
+                    allowedTracks = ['normal', 'highspeed'];
+                    break;
+                default:
+                    showNotification('无效的列车类型', 'error');
+                    return null;
+            }
+            
+            if (gameData.funds < cost) {
+                showNotification('资金不足，无法购买列车', 'error');
+                return null;
+            }
+            
+            // 检查是否需要停车场
+            if (type === 'passenger' || type === 'express') {
+                if (!depotId) {
+                    showNotification('客运列车和高铁必须停放在停车场', 'error');
+                    return null;
+                }
+                
+                const depot = gameData.depots.find(d => d.id === depotId);
+                if (!depot) {
+                    showNotification('停车场不存在', 'error');
+                    return null;
+                }
+                
+                if (!depot.connected) {
+                    showNotification('停车场未连接到车站，无法放置列车', 'error');
+                    return null;
+                }
+            }
+            
+            const train = {
+                id: `train-${gameData.nextId.train}`,
+                type,
+                name: `${name} ${gameData.nextId.train}`,
+                icon,
+                x,
+                y,
+                depotId,
+                status: 'idle',
+                currentStation: null,
+                destination: null,
+                progress: 0,
+                allowedTracks
+            };
+            
+            gameData.trains.push(train);
+            gameData.nextId.train++;
+            gameData.funds -= cost;
+            
+            // 如果是需要停放在停车场的列车，添加到停车场列表
+            if (depotId) {
+                const depot = gameData.depots.find(d => d.id === depotId);
+                if (depot) {
+                    depot.trains.push(train.id);
+                }
+            }
+            
+            showNotification(`已添加${name}，花费 ¥${cost.toLocaleString()}`);
+            updateTrainCount();
+            renderTrains();
+            updateFundsDisplay();
+            renderDepots();
+            
+            return train;
+        }
+
+        // 调度列车
+        function dispatchTrain(trainId, destinationId) {
+            const train = gameData.trains.find(t => t.id === trainId);
+            if (!train) {
+                showNotification('列车不存在', 'error');
+                return false;
+            }
+            
+            // 找到目的地
+            const destination = gameData.stations.find(s => s.id === destinationId) || 
+                               gameData.depots.find(d => d.id === destinationId);
+                               
+            if (!destination) {
+                showNotification('目的地不存在', 'error');
+                return false;
+            }
+            
+            // 检查列车当前是否空闲
+            if (train.status !== 'idle') {
+                showNotification('此列车正在运行中', 'error');
+                return false;
+            }
+            
+            // 确定起始点
+            let startId;
+            
+            if (train.depotId) {
+                startId = train.depotId;
+            } else if (train.currentStation) {
+                startId = train.currentStation;
+            } else {
+                showNotification('列车位置未知，无法发车', 'error');
+                return false;
+            }
+            
+            // 检查是否有路径
+            if (!hasPath(startId, destinationId, train.allowedTracks)) {
+                showNotification('两个站点之间没有可用路径或轨道类型不匹配', 'error');
+                return false;
+            }
+            
+            // 更新列车状态
+            train.status = 'moving';
+            train.currentStation = startId;
+            train.destination = destinationId;
+            train.progress = 0;
+            
+            const destName = destination.name || '未知站点';
+            showNotification(`${train.name}已发车，前往${destName}`);
+            renderTrains();
+            
+            // 启动列车移动动画
+            animateTrainMovement(trainId);
+            
+            return true;
+        }
+
+        // 检查两个站点之间是否有路径
+        function hasPath(startId, endId, allowedTracks) {
+            if (startId === endId) return true;
+            
+            const visited = new Set();
+            const queue = [startId];
+            
+            while (queue.length > 0) {
+                const current = queue.shift();
+                visited.add(current);
+                
+                // 找到当前元素
+                const currentElement = gameData.stations.find(s => s.id === current) || 
+                                      gameData.depots.find(d => d.id === current);
+                                      
+                if (!currentElement || !currentElement.connections) continue;
+                
+                // 检查所有连接
+                for (const neighborId of currentElement.connections) {
+                    if (neighborId === endId) return true;
+                    
+                    // 检查连接的轨道是否允许列车通行
+                    const track = gameData.tracks.find(t => 
+                        (t.start === current && t.end === neighborId) || 
+                        (t.start === neighborId && t.end === current)
+                    );
+                    
+                    if (track && allowedTracks.includes(track.type) && !visited.has(neighborId)) {
+                        queue.push(neighborId);
+                    }
+                }
+            }
+            
+            return false;
+        }
+
+        // 动画列车移动
+        function animateTrainMovement(trainId) {
+            const train = gameData.trains.find(t => t.id === trainId);
+            if (!train || train.status !== 'moving' || !train.destination) return;
+            
+            // 获取起点和终点元素
+            const startElement = gameData.stations.find(s => s.id === train.currentStation) || 
+                                gameData.depots.find(d => d.id === train.currentStation);
+                                
+            const endElement = gameData.stations.find(s => s.id === train.destination) || 
+                              gameData.depots.find(d => d.id === train.destination);
+            
+            if (!startElement || !endElement) {
+                train.status = 'idle';
+                renderTrains();
+                return;
+            }
+            
+            // 找到路径
+            const path = findShortestPath(train.currentStation, train.destination, train.allowedTracks);
+            if (!path || path.length < 2) {
+                train.status = 'idle';
+                renderTrains();
+                return;
+            }
+            
+            // 计算总距离和移动时间
+            let totalDistance = 0;
+            const pathSegments = [];
+            
+            for (let i = 0; i < path.length - 1; i++) {
+                const fromEl = gameData.stations.find(s => s.id === path[i]) || 
+                              gameData.depots.find(d => d.id === path[i]);
+                              
+                const toEl = gameData.stations.find(s => s.id === path[i+1]) || 
+                            gameData.depots.find(d => d.id === path[i+1]);
+                
+                if (fromEl && toEl) {
+                    const segmentDistance = Math.hypot(toEl.x - fromEl.x, toEl.y - fromEl.y);
+                    totalDistance += segmentDistance;
+                    pathSegments.push({from: fromEl, to: toEl, distance: segmentDistance});
+                }
+            }
+            
+            // 根据列车类型确定速度
+            const speedFactor = train.type === 'express' ? 1.5 : 1;
+            const duration = Math.max(5000, totalDistance * 10 / speedFactor);
+            const frameTime = 50;
+            const totalFrames = duration / frameTime;
+            
+            let currentSegment = 0;
+            let segmentFrame = 0;
+            let currentFrom = pathSegments[0].from;
+            let currentTo = pathSegments[0].to;
+            let segmentTotalFrames = Math.round((pathSegments[0].distance / totalDistance) * totalFrames);
+            
+            const xStep = (currentTo.x - currentFrom.x) / segmentTotalFrames;
+            const yStep = (currentTo.y - currentFrom.y) / segmentTotalFrames;
+            
+            const moveInterval = setInterval(() => {
+                segmentFrame++;
+                train.x = currentFrom.x + xStep * segmentFrame;
+                train.y = currentFrom.y + yStep * segmentFrame;
+                train.progress = Math.min(100, ((currentSegment * segmentTotalFrames + segmentFrame) / totalFrames) * 100);
+                
+                renderTrains();
+                
+                // 检查是否完成当前段
+                if (segmentFrame >= segmentTotalFrames) {
+                    currentSegment++;
+                    
+                    // 检查是否到达终点
+                    if (currentSegment >= pathSegments.length) {
+                        clearInterval(moveInterval);
+                        // 到达目的地
+                        train.x = endElement.x;
+                        train.y = endElement.y;
+                        train.currentStation = endElement.id;
+                        train.destination = null;
+                        train.status = 'idle';
+                        train.progress = 0;
+                        
+                        // 添加收入
+                        const revenue = train.type === 'express' ? 150000 : 50000;
+                        gameData.funds += revenue;
+                        showNotification(`${train.name}到达${endElement.name}，收入 ¥${revenue.toLocaleString()}`);
+                        
+                        updateFundsDisplay();
+                        renderTrains();
+                        return;
+                    }
+                    
+                    // 移动到下一段
+                    currentFrom = pathSegments[currentSegment].from;
+                    currentTo = pathSegments[currentSegment].to;
+                    segmentTotalFrames = Math.round((pathSegments[currentSegment].distance / totalDistance) * totalFrames);
+                    segmentFrame = 0;
+                    
+                    const xStep = (currentTo.x - currentFrom.x) / segmentTotalFrames;
+                    const yStep = (currentTo.y - currentFrom.y) / segmentTotalFrames;
+                }
+            }, frameTime);
+        }
+
+        // 查找最短路径
+        function findShortestPath(startId, endId, allowedTracks) {
+            // 使用Dijkstra算法查找最短路径
+            const distances = {};
+            const previous = {};
+            const nodes = [];
+            
+            // 收集所有节点
+            gameData.stations.forEach(station => nodes.push(station.id));
+            gameData.depots.forEach(depot => nodes.push(depot.id));
+            
+            // 初始化距离
+            nodes.forEach(node => {
+                distances[node] = Infinity;
+                previous[node] = null;
+            });
+            distances[startId] = 0;
+            
+            while (nodes.length > 0) {
+                // 找到距离最近的节点
+                nodes.sort((a, b) => distances[a] - distances[b]);
+                const currentNode = nodes.shift();
+                
+                // 如果到达终点，重建路径
+                if (currentNode === endId) {
+                    const path = [];
+                    let current = endId;
+                    while (current !== null) {
+                        path.unshift(current);
+                        current = previous[current];
+                    }
+                    return path;
+                }
+                
+                // 如果当前节点无法到达，跳过
+                if (distances[currentNode] === Infinity) break;
+                
+                // 找到当前节点的所有邻居
+                const currentElement = gameData.stations.find(s => s.id === currentNode) || 
+                                      gameData.depots.find(d => d.id === currentNode);
+                                      
+                if (!currentElement || !currentElement.connections) continue;
+                
+                // 检查每个邻居
+                currentElement.connections.forEach(neighborId => {
+                    // 检查轨道是否允许通行
+                    const track = gameData.tracks.find(t => 
+                        (t.start === currentNode && t.end === neighborId) || 
+                        (t.start === neighborId && t.end === currentNode)
+                    );
+                    
+                    if (!track || !allowedTracks.includes(track.type)) {
+                        return;
+                    }
+                    
+                    // 计算距离
+                    const distance = distances[currentNode] + track.length;
+                    
+                    // 如果找到更短的路径
+                    if (distance < distances[neighborId]) {
+                        distances[neighborId] = distance;
+                        previous[neighborId] = currentNode;
+                    }
+                });
+            }
+            
+            // 没有找到路径
+            return null;
+        }
+
+        // 生成特殊事件
+        function generateEvent() {
+            const eventTypes = [
+                {
+                    id: 'passenger_boom',
+                    title: '客流高峰',
+                    description: '近期某城市客流量大幅增加，增加该城市发车可获得更多收入。',
+                    impact: '特定城市车站收入增加50%',
+                    handleCost: 0,
+                    ignoreCost: 0
+                },
+                {
+                    id: 'track_repair',
+                    title: '铁轨维修',
+                    description: '一段铁轨出现磨损，需要及时维修，否则可能导致延误。',
+                    impact: '不维修将导致列车延误并罚款',
+                    handleCost: 200000,
+                    ignoreCost: 500000
+                },
+                {
+                    id: 'new_technology',
+                    title: '新技术引进',
+                    description: '新的列车技术可用，可降低维护成本。',
+                    impact: '所有列车维护成本降低20%',
+                    handleCost: 1000000,
+                    ignoreCost: 0
+                },
+                {
+                    id: 'weather_alert',
+                    title: '恶劣天气预警',
+                    description: '未来几天将有恶劣天气，可能影响列车运行。',
+                    impact: '部分列车可能延误',
+                    handleCost: 150000,
+                    ignoreCost: 400000
+                },
+                {
+                    id: 'station_upgrade',
+                    title: '车站升级机会',
+                    description: '有机会升级车站设施，提高容量和收入。',
+                    impact: '车站容量增加，收入提高30%',
+                    handleCost: 1500000,
+                    ignoreCost: 0
+                }
             ];
             
-            const randomEvent = events[Math.floor(Math.random() * events.length)];
+            // 随机选择一个事件类型
+            const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
             
-            // 创建事件提示
-            const eventElement = document.createElement('div');
-            eventElement.className = 'fixed top-4 right-4 bg-green-800/90 text-white rounded p-3 shadow-lg z-50 max-w-xs';
-            eventElement.innerHTML = `
-                <div class="font-bold">${randomEvent.title}</div>
-                <div class="text-sm mt-1">${randomEvent.content}</div>
-            `;
-            document.body.appendChild(eventElement);
+            // 为事件添加具体目标
+            let target = null;
+            let targetType = null;
             
-            // 3秒后移除
+            if (eventType.id === 'passenger_boom') {
+                // 选择一个有车站的城市
+                const citiesWithStations = [...new Set(gameData.stations.map(s => s.city))];
+                if (citiesWithStations.length > 0) {
+                    target = citiesWithStations[Math.floor(Math.random() * citiesWithStations.length)];
+                    targetType = 'city';
+                }
+            } else if (eventType.id === 'track_repair' && gameData.tracks.length > 0) {
+                target = gameData.tracks[Math.floor(Math.random() * gameData.tracks.length)].id;
+                targetType = 'track';
+            } else if (eventType.id === 'station_upgrade' && gameData.stations.length > 0) {
+                target = gameData.stations[Math.floor(Math.random() * gameData.stations.length)].id;
+                targetType = 'station';
+            }
+            
+            const event = {
+                id: `event-${gameData.nextId.event}`,
+                ...eventType,
+                timestamp: new Date(gameData.date),
+                target,
+                targetType,
+                handled: false
+            };
+            
+            gameData.events.push(event);
+            gameData.nextId.event++;
+            
+            // 显示事件通知
+            showEventNotification(event);
+            
+            // 更新事件计数
+            updateEventCount();
+            
+            return event;
+        }
+
+        // 处理事件
+        function handleEvent(eventId) {
+            const event = gameData.events.find(e => e.id === eventId && !e.handled);
+            if (!event) return false;
+            
+            // 检查是否有足够资金处理事件
+            if (event.handleCost > 0 && gameData.funds < event.handleCost) {
+                showNotification('资金不足，无法处理此事件', 'error');
+                return false;
+            }
+            
+            event.handled = true;
+            gameData.funds -= event.handleCost;
+            
+            let message = `已处理事件: ${event.title}`;
+            if (event.handleCost > 0) {
+                message += `，花费 ¥${event.handleCost.toLocaleString()}`;
+            }
+            
+            // 根据事件类型应用特殊效果
+            if (event.id === 'new_technology') {
+                message += '，所有列车维护成本降低20%';
+            } else if (event.id === 'station_upgrade' && event.target && event.targetType === 'station') {
+                const station = gameData.stations.find(s => s.id === event.target);
+                if (station) {
+                    message += `，${station.name}已升级`;
+                }
+            } else if (event.id === 'track_repair' && event.target && event.targetType === 'track') {
+                const track = gameData.tracks.find(t => t.id === event.target);
+                if (track) {
+                    track.condition = 100;
+                    message += '，铁轨已修复';
+                    renderTracks();
+                }
+            }
+            
+            showNotification(message);
+            updateFundsDisplay();
+            updateEventCount();
+            hideEventPanel();
+            
+            return true;
+        }
+
+        // 忽略事件
+        function ignoreEvent(eventId) {
+            const event = gameData.events.find(e => e.id === eventId && !e.handled);
+            if (!event) return false;
+            
+            event.handled = true;
+            gameData.funds -= event.ignoreCost;
+            
+            let message = `已忽略事件: ${event.title}`;
+            if (event.ignoreCost > 0) {
+                message += `，罚款 ¥${event.ignoreCost.toLocaleString()}`;
+            }
+            
+            // 应用忽略事件的后果
+            if (event.id === 'track_repair' && event.target && event.targetType === 'track') {
+                const track = gameData.tracks.find(t => t.id === event.target);
+                if (track) {
+                    track.condition = Math.max(0, track.condition - 50);
+                    message += '，铁轨状况恶化';
+                    renderTracks();
+                }
+            }
+            
+            showNotification(message);
+            updateFundsDisplay();
+            updateEventCount();
+            hideEventPanel();
+            
+            return true;
+        }
+
+        // 开始事件生成器
+        function startEventGenerator() {
+            // 初始延迟后生成第一个事件
             setTimeout(() => {
-                eventElement.classList.add('opacity-0', 'transition-opacity', 'duration-500');
-                setTimeout(() => eventElement.remove(), 500);
-            }, 3000);
+                generateEvent();
+                
+                // 之后每3-5分钟生成一个新事件
+                setInterval(() => {
+                    if (Math.random() > 0.3) {
+                        generateEvent();
+                    }
+                }, 1000 * 60 * (3 + Math.random() * 2));
+            }, 1000 * 60 * 2);
         }
-        
-        // 地图切换
-        document.getElementById('map-china').addEventListener('click', () => {
-            document.getElementById('china-map').classList.remove('hidden');
-            document.getElementById('asia-map').classList.add('hidden');
-            document.getElementById('map-china').classList.add('bg-primary');
-            document.getElementById('map-china').classList.remove('bg-gray-700');
-            document.getElementById('map-asia').classList.add('bg-gray-700');
-            document.getElementById('map-asia').classList.remove('bg-primary');
-        });
-        
-        document.getElementById('map-asia').addEventListener('click', () => {
-            document.getElementById('china-map').classList.add('hidden');
-            document.getElementById('asia-map').classList.remove('hidden');
-            document.getElementById('map-asia').classList.add('bg-primary');
-            document.getElementById('map-asia').classList.remove('bg-gray-700');
-            document.getElementById('map-china').classList.add('bg-gray-700');
-            document.getElementById('map-china').classList.remove('bg-primary');
-        });
-        
-        // 缩放控制
-        document.getElementById('zoom-in').addEventListener('click', () => {
-            if (gameState.zoomLevel < 1.5) {
-                gameState.zoomLevel += 0.1;
-                updateMapZoom();
+
+        // 保存游戏
+        function saveGame(data = gameData) {
+            try {
+                const gameCopy = JSON.parse(JSON.stringify(data));
+                gameCopy.date = gameCopy.date.toString();
+                localStorage.setItem('railwaySimulatorSave', JSON.stringify(gameCopy));
+                return true;
+            } catch (e) {
+                console.error('保存游戏失败:', e);
+                return false;
             }
-        });
-        
-        document.getElementById('zoom-out').addEventListener('click', () => {
-            if (gameState.zoomLevel > 0.7) {
-                gameState.zoomLevel -= 0.1;
-                updateMapZoom();
-            }
-        });
-        
-        function updateMapZoom() {
-            document.getElementById('china-map').style.transform = `scale(${gameState.zoomLevel})`;
-            document.getElementById('asia-map').style.transform = `scale(${gameState.zoomLevel})`;
         }
-        
-        // 球体点击事件 - 简化为左键单击即可完成所有操作
-        provinceSpheres.forEach(sphere => {
-            sphere.addEventListener('click', (e) => {
-                // 移除其他球体的选中状态
-                provinceSpheres.forEach(s => s.classList.remove('province-sphere-selected'));
-                // 添加当前球体的选中状态
-                sphere.classList.add('province-sphere-selected');
+
+        // 加载游戏
+        function loadGame(savedData) {
+            try {
+                // 清除当前游戏数据
+                gameData.stations = [];
+                gameData.depots = [];
+                gameData.tracks = [];
+                gameData.trains = [];
+                gameData.events = [];
+                gameData.stationCounters = {};
                 
-                // 获取省份名称
-                const provinceName = sphere.getAttribute('data-name');
+                // 恢复基本数据
+                gameData.funds = savedData.funds;
+                gameData.date = new Date(savedData.date);
+                gameData.nextId = savedData.nextId;
+                gameData.selectedTool = 'select';
+                gameData.selectedElement = null;
+                gameData.mapTransform = savedData.mapTransform;
                 
-                // 更新右侧面板信息
-                document.getElementById('panel-province-name').textContent = provinceName;
+                // 恢复车站计数器
+                if (savedData.stationCounters) {
+                    gameData.stationCounters = savedData.stationCounters;
+                } else {
+                    initStationCounters();
+                }
                 
-                // 显示快捷操作菜单
-                const rect = sphere.getBoundingClientRect();
-                quickActions.style.left = `${rect.right + 10}px`;
-                quickActions.style.top = `${rect.top}px`;
-                actionTitle.textContent = provinceName;
-                quickActions.classList.remove('hidden');
+                // 恢复车站
+                if (savedData.stations) {
+                    gameData.stations = [...savedData.stations];
+                }
                 
-                // 如果点击的是敌方省份，默认选中进攻按钮
-                if (sphere.classList.contains('bg-enemy')) {
-                    document.getElementById('btn-attack').focus();
+                // 恢复停车场
+                if (savedData.depots) {
+                    gameData.depots = [...savedData.depots];
+                }
+                
+                // 恢复铁轨
+                if (savedData.tracks) {
+                    gameData.tracks = [...savedData.tracks];
+                }
+                
+                // 恢复列车
+                if (savedData.trains) {
+                    gameData.trains = [...savedData.trains];
+                }
+                
+                // 恢复事件
+                if (savedData.events) {
+                    gameData.events = [...savedData.events];
+                }
+                
+                // 重新渲染所有元素
+                renderAll();
+                
+                return true;
+            } catch (e) {
+                console.error('加载游戏失败:', e);
+                return false;
+            }
+        }
+
+        // 渲染函数
+        function renderAll() {
+            renderCities();
+            renderStations();
+            renderDepots();
+            renderTracks();
+            renderTrains();
+            updateFundsDisplay();
+            updateDateDisplay();
+            updateStationCount();
+            updateDepotCount();
+            updateTrainCount();
+            updateTrackCount();
+            updateEventCount();
+            updateMapTransform();
+        }
+
+        // 渲染城市标签
+        function renderCities() {
+            const container = document.getElementById('cities-container');
+            container.innerHTML = '';
+            
+            // 根据当前缩放级别决定显示哪些城市
+            const scaleFactor = gameData.mapTransform.scale;
+            
+            // 只显示重要城市，缩放级别低时显示更多城市
+            Object.entries(chinaCities).forEach(([name, city]) => {
+                // 缩放级别高（放大）时显示更多城市
+                if (scaleFactor < 0.8 && city.importance < 8) return;
+                if (scaleFactor < 0.5 && city.importance < 9) return;
+                
+                const cityEl = document.createElement('div');
+                cityEl.className = `city-label absolute text-white transform -translate-x-1/2 -translate-y-1/2`;
+                cityEl.style.left = `${city.x}px`;
+                cityEl.style.top = `${city.y}px`;
+                cityEl.style.fontSize = `${Math.max(12, 8 + city.importance * 0.5)}px`;
+                cityEl.textContent = name;
+                
+                container.appendChild(cityEl);
+            });
+        }
+
+        function renderStations() {
+            const container = document.getElementById('map-elements');
+            
+            // 清除现有车站
+            document.querySelectorAll('.station-element').forEach(el => el.remove());
+            
+            // 绘制所有车站
+            gameData.stations.forEach(station => {
+                const stationEl = document.createElement('div');
+                stationEl.id = station.id;
+                
+                // 根据车站类型设置不同样式
+                const baseClasses = `station-element absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2 ${gameData.selectedElement === station.id ? 'ring-4 ring-white' : ''}`;
+                let typeClasses = '';
+                
+                if (station.type === 'highspeed') {
+                    typeClasses = 'w-10 h-10 rounded-full bg-highspeed flex items-center justify-center shadow-lg';
+                } else {
+                    typeClasses = 'w-9 h-9 rounded-full bg-station flex items-center justify-center shadow-lg';
+                }
+                
+                stationEl.className = `${baseClasses} ${typeClasses}`;
+                stationEl.style.left = `${station.x}px`;
+                stationEl.style.top = `${station.y}px`;
+                stationEl.innerHTML = station.type === 'highspeed' ? 
+                    '<i class="fa fa-train text-white"></i>' : 
+                    '<i class="fa fa-building text-white"></i>';
+                stationEl.title = station.name;
+                
+                // 添加点击事件
+                stationEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleStationClick(station.id);
+                });
+                
+                container.appendChild(stationEl);
+            });
+        }
+
+        function renderDepots() {
+            const container = document.getElementById('map-elements');
+            
+            // 清除现有停车场
+            document.querySelectorAll('.depot-element').forEach(el => el.remove());
+            
+            // 绘制所有停车场
+            gameData.depots.forEach(depot => {
+                const depotEl = document.createElement('div');
+                depotEl.id = depot.id;
+                depotEl.className = `depot-element absolute w-12 h-12 rounded bg-depot/80 border-2 border-depot flex items-center justify-center cursor-pointer transform -translate-x-1/2 -translate-y-1/2 ${gameData.selectedElement === depot.id ? 'ring-4 ring-white' : ''} ${!depot.connected ? 'opacity-50' : ''} shadow-lg`;
+                depotEl.style.left = `${depot.x}px`;
+                depotEl.style.top = `${depot.y}px`;
+                depotEl.innerHTML = '<i class="fa fa-warehouse text-white text-lg"></i>';
+                depotEl.title = `${depot.name} ${depot.connected ? '' : '(未连接)'}`;
+                
+                // 添加点击事件
+                depotEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleDepotClick(depot.id);
+                });
+                
+                container.appendChild(depotEl);
+            });
+        }
+
+        function renderTracks() {
+            const svg = document.getElementById('tracks-svg');
+            svg.innerHTML = '';
+            
+            gameData.tracks.forEach(track => {
+                // 找到起点和终点元素
+                let startElement, endElement;
+                
+                startElement = gameData.stations.find(s => s.id === track.start) || 
+                              gameData.depots.find(d => d.id === track.start);
+                              
+                endElement = gameData.stations.find(s => s.id === track.end) || 
+                            gameData.depots.find(d => d.id === track.end);
+                
+                if (!startElement || !endElement) return;
+                
+                // 创建铁轨路径
+                const trackPath = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                trackPath.setAttribute('x1', startElement.x);
+                trackPath.setAttribute('y1', startElement.y);
+                trackPath.setAttribute('x2', endElement.x);
+                trackPath.setAttribute('y2', endElement.y);
+                
+                // 根据铁轨类型和状况设置颜色
+                let strokeColor;
+                
+                if (track.type === 'highspeed') {
+                    // 高铁铁轨 - 蓝色系
+                    if (track.condition < 30) {
+                        strokeColor = '#60A5FA'; // 亮蓝色（需维修）
+                    } else if (track.condition < 70) {
+                        strokeColor = '#3B82F6'; // 中蓝色（一般）
+                    } else {
+                        strokeColor = '#2563EB'; // 深蓝色（良好）
+                    }
+                } else {
+                    // 普通铁轨 - 灰色系
+                    if (track.condition < 30) {
+                        strokeColor = '#9CA3AF'; // 亮灰色（需维修）
+                    } else if (track.condition < 70) {
+                        strokeColor = '#6B7280'; // 中灰色（一般）
+                    } else {
+                        strokeColor = '#4B5563'; // 深灰色（良好）
+                    }
+                }
+                
+                trackPath.setAttribute('stroke', strokeColor);
+                trackPath.setAttribute('stroke-width', track.type === 'highspeed' ? '5' : '4');
+                trackPath.setAttribute('stroke-linecap', 'round');
+                trackPath.setAttribute('data-track-id', track.id);
+                
+                // 为高铁轨道添加特殊样式
+                if (track.type === 'highspeed') {
+                    trackPath.setAttribute('stroke-dasharray', '1,1');
+                }
+                
+                svg.appendChild(trackPath);
+            });
+        }
+
+        function renderTrains() {
+            const container = document.getElementById('map-elements');
+            
+            // 清除现有列车
+            document.querySelectorAll('.train-element').forEach(el => el.remove());
+            
+            // 绘制所有列车
+            gameData.trains.forEach(train => {
+                const trainEl = document.createElement('div');
+                trainEl.id = train.id;
+                
+                // 根据列车类型设置颜色
+                let bgColor = 'bg-primary'; // 默认红色
+                if (train.type === 'express') {
+                    bgColor = 'bg-highspeed'; // 高铁蓝色
+                } else if (train.type === 'inspection') {
+                    bgColor = 'bg-purple-600'; // 动检紫色
+                } else if (train.type === 'track') {
+                    bgColor = 'bg-teal-600'; // 轨检青色
+                }
+                
+                trainEl.className = `train-element absolute w-8 h-8 rounded-full ${bgColor} flex items-center justify-center cursor-pointer transform -translate-x-1/2 -translate-y-1/2 transition-all ${gameData.selectedElement === train.id ? 'ring-4 ring-white' : ''} ${train.status === 'idle' ? 'train-ready' : ''} shadow-lg`;
+                trainEl.style.left = `${train.x}px`;
+                trainEl.style.top = `${train.y}px`;
+                trainEl.innerHTML = `<i class="fa ${train.icon} text-white"></i>`;
+                
+                let statusText = '';
+                switch(train.status) {
+                    case 'idle':
+                        statusText = '等待调度';
+                        break;
+                    case 'moving':
+                        statusText = `行驶中 (${Math.round(train.progress)}%)`;
+                        break;
+                    case 'maintenance':
+                        statusText = '维护中';
+                        break;
+                }
+                
+                trainEl.title = `${train.name} - ${statusText}`;
+                
+                // 添加点击事件
+                trainEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleTrainClick(train.id);
+                });
+                
+                container.appendChild(trainEl);
+            });
+        }
+
+        // 显示轨道预览
+        function showTrackPreview(startX, startY, endX, endY, type = 'normal') {
+            const svg = document.getElementById('track-preview-svg');
+            svg.innerHTML = '';
+            
+            if (startX === null || startY === null || endX === null || endY === null) return;
+            
+            const previewPath = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            previewPath.setAttribute('x1', startX);
+            previewPath.setAttribute('y1', startY);
+            previewPath.setAttribute('x2', endX);
+            previewPath.setAttribute('y2', endY);
+            
+            // 根据轨道类型设置预览颜色
+            const color = type === 'highspeed' ? '#60A5FA' : '#9CA3AF';
+            
+            previewPath.setAttribute('stroke', color);
+            previewPath.setAttribute('stroke-width', type === 'highspeed' ? '5' : '4');
+            previewPath.setAttribute('stroke-dasharray', '8,4');
+            previewPath.setAttribute('stroke-linecap', 'round');
+            
+            // 高铁轨道额外样式
+            if (type === 'highspeed') {
+                previewPath.setAttribute('stroke-opacity', '0.7');
+            }
+            
+            svg.appendChild(previewPath);
+        }
+
+        // 清除轨道预览
+        function clearTrackPreview() {
+            document.getElementById('track-preview-svg').innerHTML = '';
+        }
+
+        // UI更新函数
+        function updateFundsDisplay() {
+            document.getElementById('funds-display').textContent = `¥${gameData.funds.toLocaleString()}`;
+        }
+
+        function updateDateDisplay() {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('game-date').textContent = gameData.date.toLocaleDateString('zh-CN', options);
+        }
+
+        function updateStationCount() {
+            document.getElementById('station-count').textContent = gameData.stations.length;
+        }
+
+        function updateDepotCount() {
+            document.getElementById('depot-count').textContent = gameData.depots.length;
+        }
+
+        function updateTrainCount() {
+            document.getElementById('train-count').textContent = gameData.trains.length;
+        }
+
+        function updateTrackCount() {
+            document.getElementById('track-count').textContent = gameData.tracks.length;
+        }
+
+        function updateEventCount() {
+            const unhandledEvents = gameData.events.filter(e => !e.handled).length;
+            const eventCountEl = document.getElementById('event-count');
+            
+            if (unhandledEvents > 0) {
+                eventCountEl.textContent = unhandledEvents;
+                eventCountEl.classList.remove('hidden');
+                document.getElementById('events-button').classList.add('event-alert');
+                setTimeout(() => {
+                    document.getElementById('events-button').classList.remove('event-alert');
+                }, 1500);
+            } else {
+                eventCountEl.classList.add('hidden');
+            }
+        }
+
+        // 显示通知
+        function showNotification(message, type = 'info') {
+            const area = document.getElementById('notification-area');
+            const notification = document.createElement('p');
+            
+            let icon = 'fa-info-circle text-blue-400';
+            if (type === 'error') icon = 'fa-exclamation-circle text-red-400';
+            if (type === 'warning') icon = 'fa-exclamation-triangle text-yellow-400';
+            if (type === 'success') icon = 'fa-check-circle text-green-400';
+            
+            notification.className = `mb-1 flex items-start`;
+            notification.innerHTML = `<i class="fa ${icon} mr-2 mt-0.5"></i> ${message}`;
+            
+            area.appendChild(notification);
+            area.scrollTop = area.scrollHeight;
+            
+            // 5秒后自动移除
+            setTimeout(() => {
+                if (notification.parentNode === area) {
+                    area.removeChild(notification);
+                }
+            }, 5000);
+        }
+
+        // 显示事件通知
+        function showEventNotification(event) {
+            showNotification(`新事件: ${event.title}`, 'warning');
+            
+            // 在移动设备上自动显示事件详情
+            if (window.innerWidth < 768) {
+                showEventPanel(event.id);
+            }
+        }
+
+        // 显示信息面板
+        function showInfoPanel() {
+            document.getElementById('info-panel').classList.remove('hidden');
+            document.getElementById('station-panel').classList.add('hidden');
+            document.getElementById('depot-panel').classList.add('hidden');
+            document.getElementById('train-panel').classList.add('hidden');
+            document.getElementById('event-panel').classList.add('hidden');
+        }
+
+        // 显示车站面板
+        function showStationPanel(stationId) {
+            const station = gameData.stations.find(s => s.id === stationId);
+            if (!station) return;
+            
+            document.getElementById('station-name').value = station.name;
+            document.getElementById('station-type').value = station.type;
+            
+            // 更新车站列车列表
+            const trainsList = document.getElementById('station-trains');
+            trainsList.innerHTML = '';
+            
+            const stationTrains = gameData.trains.filter(t => t.currentStation === stationId && t.status === 'idle');
+            
+            if (stationTrains.length === 0) {
+                trainsList.innerHTML = '<p class="text-gray-400 italic">暂无列车停靠</p>';
+            } else {
+                stationTrains.forEach(train => {
+                    const trainEl = document.createElement('div');
+                    trainEl.className = 'bg-gray-500/50 p-1 rounded';
+                    trainEl.innerHTML = `<i class="fa ${train.icon} mr-1"></i> ${train.name}`;
+                    trainsList.appendChild(trainEl);
+                });
+            }
+            
+            // 显示面板
+            document.getElementById('info-panel').classList.add('hidden');
+            document.getElementById('station-panel').classList.remove('hidden');
+            document.getElementById('depot-panel').classList.add('hidden');
+            document.getElementById('train-panel').classList.add('hidden');
+            document.getElementById('event-panel').classList.add('hidden');
+            
+            // 保存按钮事件
+            document.getElementById('save-station').onclick = () => {
+                const newType = document.getElementById('station-type').value;
+                const typeChanged = station.type !== newType;
+                
+                station.name = document.getElementById('station-name').value || station.name;
+                station.type = newType;
+                
+                // 如果车站类型改变，需要检查相关轨道
+                if (typeChanged && station.type === 'highspeed') {
+                    // 检查是否有普通轨道连接到高铁车站
+                    const normalTracks = gameData.tracks.filter(t => 
+                        (t.start === station.id || t.end === station.id) && t.type === 'normal'
+                    );
+                    
+                    if (normalTracks.length > 0) {
+                        showNotification(`警告：高铁车站仍连接普通轨道，高铁列车无法通行`, 'warning');
+                    }
+                }
+                
+                renderStations();
+                renderTracks();
+                showNotification(`已更新车站信息: ${station.name}`);
+                showStationPanel(stationId);
+            };
+        }
+
+        // 显示停车场面板
+        function showDepotPanel(depotId) {
+            const depot = gameData.depots.find(d => d.id === depotId);
+            if (!depot) return;
+            
+            document.getElementById('depot-name').value = depot.name;
+            
+            // 更新停车场列车列表
+            const trainsList = document.getElementById('depot-trains');
+            trainsList.innerHTML = '';
+            
+            if (depot.trains.length === 0) {
+                trainsList.innerHTML = '<p class="text-gray-400 italic">暂无列车</p>';
+            } else {
+                depot.trains.forEach(trainId => {
+                    const train = gameData.trains.find(t => t.id === trainId);
+                    if (train) {
+                        const trainEl = document.createElement('div');
+                        trainEl.className = 'bg-gray-500/50 p-1 rounded';
+                        trainEl.innerHTML = `<i class="fa ${train.icon} mr-1"></i> ${train.name} (${train.status === 'idle' ? '待发' : '运行中'})`;
+                        trainsList.appendChild(trainEl);
+                    }
+                });
+            }
+            
+            // 显示面板
+            document.getElementById('info-panel').classList.add('hidden');
+            document.getElementById('station-panel').classList.add('hidden');
+            document.getElementById('depot-panel').classList.remove('hidden');
+            document.getElementById('train-panel').classList.add('hidden');
+            document.getElementById('event-panel').classList.add('hidden');
+            
+            // 添加列车按钮事件
+            document.getElementById('add-train-to-depot').onclick = () => {
+                // 打开列车类型选择
+                document.querySelectorAll('.add-train-btn').forEach(btn => {
+                    btn.classList.remove('bg-primary');
+                    btn.classList.add('bg-gray-600', 'hover:bg-gray-500');
+                });
+                document.querySelector('[data-train-type="passenger"]').classList.add('bg-primary');
+                document.querySelector('[data-train-type="passenger"]').classList.remove('bg-gray-600', 'hover:bg-gray-500');
+                
+                gameData.selectedTool = 'add-train-passenger';
+                showNotification('请选择要添加的列车类型');
+            };
+            
+            // 保存按钮事件
+            document.getElementById('save-depot').onclick = () => {
+                depot.name = document.getElementById('depot-name').value || depot.name;
+                renderDepots();
+                showNotification(`已更新停车场名称: ${depot.name}`);
+                showDepotPanel(depotId);
+            };
+        }
+
+        // 显示列车面板
+        function showTrainPanel(trainId) {
+            const train = gameData.trains.find(t => t.id === trainId);
+            if (!train) return;
+            
+            document.getElementById('train-number').value = train.id;
+            document.getElementById('train-type').value = train.name.split(' ')[0];
+            
+            let statusText = '';
+            switch(train.status) {
+                case 'idle':
+                    statusText = '等待调度';
+                    break;
+                case 'moving':
+                    statusText = `行驶中 (${Math.round(train.progress)}%)`;
+                    break;
+                case 'maintenance':
+                    statusText = '维护中';
+                    break;
+            }
+            
+            document.getElementById('train-status').value = statusText;
+            
+            let locationText = '';
+            if (train.status === 'moving' && train.destination) {
+                const startElement = gameData.stations.find(s => s.id === train.currentStation) || 
+                                   gameData.depots.find(d => d.id === train.currentStation);
+                                   
+                const endElement = gameData.stations.find(s => s.id === train.destination) || 
+                                 gameData.depots.find(d => d.id === train.destination);
+                                 
+                if (startElement && endElement) {
+                    locationText = `${startElement.name} -> ${endElement.name}`;
+                }
+            } else if (train.currentStation) {
+                const station = gameData.stations.find(s => s.id === train.currentStation) ||
+                               gameData.depots.find(d => d.id === train.currentStation);
+                               
+                locationText = station ? station.name : '未知站点';
+            } else if (train.depotId) {
+                const depot = gameData.depots.find(d => d.id === train.depotId);
+                locationText = depot ? `${depot.name} (停车场)` : '未知停车场';
+            }
+            
+            document.getElementById('train-location').value = locationText;
+            
+            // 显示面板
+            document.getElementById('info-panel').classList.add('hidden');
+            document.getElementById('station-panel').classList.add('hidden');
+            document.getElementById('depot-panel').classList.add('hidden');
+            document.getElementById('train-panel').classList.remove('hidden');
+            document.getElementById('event-panel').classList.add('hidden');
+            
+            // 调度按钮事件
+            document.getElementById('dispatch-train-btn').onclick = () => {
+                if (train.status !== 'idle') {
+                    showNotification('只有空闲状态的列车可以调度', 'error');
+                    return;
+                }
+                
+                // 开始调度流程
+                startTrainDispatch(trainId);
+            };
+        }
+
+        // 显示事件面板
+        function showEventPanel(eventId) {
+            const event = gameData.events.find(e => e.id === eventId);
+            if (!event) return;
+            
+            // 填充事件详情
+            let targetText = '';
+            if (event.target && event.targetType) {
+                if (event.targetType === 'city') {
+                    targetText = `涉及城市: ${event.target}`;
+                } else if (event.targetType === 'station') {
+                    const station = gameData.stations.find(s => s.id === event.target);
+                    if (station) targetText = `涉及车站: ${station.name}`;
+                } else if (event.targetType === 'track') {
+                    targetText = `涉及铁轨`;
+                }
+            }
+            
+            const detailsHtml = `
+                <h4 class="font-bold ${event.type === 'highspeed' ? 'text-highspeed' : 'text-primary'} mb-2">${event.title}</h4>
+                <p class="mb-2">${event.description}</p>
+                ${targetText ? `<p class="text-gray-300 text-xs mb-2">${targetText}</p>` : ''}
+                <p class="text-sm mb-1"><strong>影响:</strong> ${event.impact}</p>
+                <div class="flex justify-between mt-3 text-xs">
+                    <span>处理成本: ${event.handleCost > 0 ? `¥${event.handleCost.toLocaleString()}` : '免费'}</span>
+                    <span>忽略成本: ${event.ignoreCost > 0 ? `¥${event.ignoreCost.toLocaleString()}` : '无'}</span>
+                </div>
+            `;
+            
+            document.getElementById('event-details').innerHTML = detailsHtml;
+            document.getElementById('mobile-event-details').innerHTML = detailsHtml;
+            
+            // 显示面板
+            document.getElementById('info-panel').classList.add('hidden');
+            document.getElementById('station-panel').classList.add('hidden');
+            document.getElementById('depot-panel').classList.add('hidden');
+            document.getElementById('train-panel').classList.add('hidden');
+            document.getElementById('event-panel').classList.remove('hidden');
+            
+            // 处理按钮事件
+            document.getElementById('event-handle').onclick = () => handleEvent(eventId);
+            document.getElementById('mobile-event-handle').onclick = () => {
+                handleEvent(eventId);
+                document.getElementById('event-modal').classList.add('hidden');
+            };
+            
+            // 忽略按钮事件
+            document.getElementById('event-ignore').onclick = () => ignoreEvent(eventId);
+            document.getElementById('mobile-event-ignore').onclick = () => {
+                ignoreEvent(eventId);
+                document.getElementById('event-modal').classList.add('hidden');
+            };
+            
+            // 在移动设备上显示弹窗
+            if (window.innerWidth < 768) {
+                document.getElementById('event-modal').classList.remove('hidden');
+            }
+        }
+
+        // 隐藏事件面板
+        function hideEventPanel() {
+            document.getElementById('event-panel').classList.add('hidden');
+            document.getElementById('event-modal').classList.add('hidden');
+            showInfoPanel();
+        }
+
+        // 处理函数
+        function handleStationClick(stationId) {
+            const station = gameData.stations.find(s => s.id === stationId);
+            if (!station) return;
+            
+            switch(gameData.selectedTool) {
+                case 'select':
+                    gameData.selectedElement = stationId;
+                    showStationPanel(stationId);
+                    renderStations();
+                    break;
+                    
+                case 'track':
+                case 'highspeed':
+                    if (!gameData.trackBuilding.inProgress) {
+                        // 开始建造铁轨
+                        gameData.trackBuilding.inProgress = true;
+                        gameData.trackBuilding.startElement = stationId;
+                        gameData.trackBuilding.trackType = gameData.selectedTool;
+                        
+                        const trackTypeText = gameData.selectedTool === 'highspeed' ? '高铁' : '普通';
+                        showNotification(`选择了起点${trackTypeText}车站: ${station.name}，请选择终点站点`);
+                    } else if (gameData.trackBuilding.startElement !== stationId) {
+                        // 完成铁轨建造
+                        addTrack(gameData.trackBuilding.startElement, stationId, gameData.trackBuilding.trackType);
+                        gameData.trackBuilding.inProgress = false;
+                        gameData.trackBuilding.startElement = null;
+                        clearTrackPreview();
+                    } else {
+                        // 取消铁轨建造
+                        gameData.trackBuilding.inProgress = false;
+                        gameData.trackBuilding.startElement = null;
+                        clearTrackPreview();
+                        showNotification('已取消铁轨建造');
+                    }
+                    break;
+                    
+                case 'remove':
+                    // 检查是否有连接的铁轨
+                    const connectedTracks = gameData.tracks.filter(t => 
+                        t.start === stationId || t.end === stationId
+                    );
+                    
+                    if (connectedTracks.length > 0) {
+                        // 先删除相关铁轨
+                        connectedTracks.forEach(track => {
+                            const index = gameData.tracks.findIndex(t => t.id === track.id);
+                            if (index !== -1) {
+                                gameData.tracks.splice(index, 1);
+                                
+                                // 更新连接信息
+                                const startElement = gameData.stations.find(s => s.id === track.start) || 
+                                                  gameData.depots.find(d => d.id === track.start);
+                                                  
+                                const endElement = gameData.stations.find(s => s.id === track.end) || 
+                                                  gameData.depots.find(d => d.id === track.end);
+                                
+                                if (startElement && startElement.connections) {
+                                    const connIndex = startElement.connections.indexOf(track.end);
+                                    if (connIndex !== -1) startElement.connections.splice(connIndex, 1);
+                                }
+                                
+                                if (endElement && endElement.connections) {
+                                    const connIndex = endElement.connections.indexOf(track.start);
+                                    if (connIndex !== -1) endElement.connections.splice(connIndex, 1);
+                                }
+                                
+                                // 更新停车场连接状态
+                                if (startElement && startElement.id.startsWith('depot-')) {
+                                    startElement.connected = startElement.connections.length > 0;
+                                }
+                                if (endElement && endElement.id.startsWith('depot-')) {
+                                    endElement.connected = endElement.connections.length > 0;
+                                }
+                            }
+                        });
+                        
+                        renderTracks();
+                        renderDepots();
+                        updateTrackCount();
+                        showNotification(`已删除${connectedTracks.length}段铁轨`);
+                    }
+                    
+                    // 检查是否有列车在此车站
+                    const stationTrains = gameData.trains.filter(t => t.currentStation === stationId);
+                    if (stationTrains.length > 0) {
+                        // 移除这些列车
+                        stationTrains.forEach(train => {
+                            const index = gameData.trains.findIndex(t => t.id === train.id);
+                            if (index !== -1) {
+                                gameData.trains.splice(index, 1);
+                            }
+                        });
+                        
+                        renderTrains();
+                        updateTrainCount();
+                        showNotification(`已移除${stationTrains.length}列停站列车`);
+                    }
+                    
+                    // 删除车站
+                    const index = gameData.stations.findIndex(s => s.id === stationId);
+                    if (index !== -1) {
+                        gameData.stations.splice(index, 1);
+                        showNotification(`已删除车站: ${station.name}`);
+                    }
+                    
+                    // 更新计数和显示
+                    updateStationCount();
+                    renderStations();
+                    renderStations();
+                    showInfoPanel();
+                    break;
+            }
+        }
+
+        function handleDepotClick(depotId) {
+            const depot = gameData.depots.find(d => d.id === depotId);
+            if (!depot) return;
+            
+            switch(gameData.selectedTool) {
+                case 'select':
+                    gameData.selectedElement = depotId;
+                    showDepotPanel(depotId);
+                    renderDepots();
+                    break;
+                    
+                case 'track':
+                case 'highspeed':
+                    if (!gameData.trackBuilding.inProgress) {
+                        // 开始建造铁轨
+                        gameData.trackBuilding.inProgress = true;
+                        gameData.trackBuilding.startElement = depotId;
+                        gameData.trackBuilding.trackType = gameData.selectedTool;
+                        
+                        const trackTypeText = gameData.selectedTool === 'highspeed' ? '高铁' : '普通';
+                        showNotification(`选择了起点停车场: ${depot.name}，请选择终点站点建造${trackTypeText}铁轨`);
+                    } else if (gameData.trackBuilding.startElement !== depotId) {
+                        // 完成铁轨建造
+                        addTrack(gameData.trackBuilding.startElement, depotId, gameData.trackBuilding.trackType);
+                        gameData.trackBuilding.inProgress = false;
+                        gameData.trackBuilding.startElement = null;
+                        clearTrackPreview();
+                    } else {
+                        // 取消铁轨建造
+                        gameData.trackBuilding.inProgress = false;
+                        gameData.trackBuilding.startElement = null;
+                        clearTrackPreview();
+                        showNotification('已取消铁轨建造');
+                    }
+                    break;
+                    
+                case 'train':
+                    // 默认添加客运列车
+                    addTrain('passenger', depot.x, depot.y, depotId);
+                    break;
+                    
+                case 'remove':
+                    if (depot.trains && depot.trains.length > 0) {
+                        showNotification('请先移除停车场内的所有列车', 'error');
+                        return;
+                    }
+                    
+                    // 检查是否有连接的铁轨
+                    const connectedTracks = gameData.tracks.filter(t => 
+                        t.start === depotId || t.end === depotId
+                    );
+                    
+                    if (connectedTracks.length > 0) {
+                        // 先删除相关铁轨
+                        connectedTracks.forEach(track => {
+                            const index = gameData.tracks.findIndex(t => t.id === track.id);
+                            if (index !== -1) {
+                                gameData.tracks.splice(index, 1);
+                                
+                                // 更新连接信息
+                                const startElement = gameData.stations.find(s => s.id === track.start) || 
+                                                  gameData.depots.find(d => d.id === track.start);
+                                                  
+                                const endElement = gameData.stations.find(s => s.id === track.end) || 
+                                                  gameData.depots.find(d => d.id === track.end);
+                                
+                                if (startElement && startElement.connections) {
+                                    const connIndex = startElement.connections.indexOf(track.end);
+                                    if (connIndex !== -1) startElement.connections.splice(connIndex, 1);
+                                }
+                                
+                                if (endElement && endElement.connections) {
+                                    const connIndex = endElement.connections.indexOf(track.start);
+                                    if (connIndex !== -1) endElement.connections.splice(connIndex, 1);
+                                }
+                            }
+                        });
+                        
+                        renderTracks();
+                        updateTrackCount();
+                        showNotification(`已删除${connectedTracks.length}段铁轨`);
+                    }
+                    
+                    // 删除停车场
+                    const index = gameData.depots.findIndex(d => d.id === depotId);
+                    if (index !== -1) {
+                        gameData.depots.splice(index, 1);
+                        showNotification(`已删除停车场: ${depot.name}`);
+                    }
+                    
+                    // 更新计数和显示
+                    updateDepotCount();
+                    renderDepots();
+                    showInfoPanel();
+                    break;
+            }
+        }
+
+        function handleTrainClick(trainId) {
+            const train = gameData.trains.find(t => t.id === trainId);
+            if (!train) return;
+            
+            // 如果正在调度列车，且点击了站点，则完成调度
+            if (gameData.trainDispatch.inProgress && gameData.trainDispatch.selectedTrain) {
+                dispatchTrain(gameData.trainDispatch.selectedTrain, trainId);
+                gameData.trainDispatch.inProgress = false;
+                gameData.trainDispatch.selectedTrain = null;
+                hideDispatchHint();
+                return;
+            }
+            
+            switch(gameData.selectedTool) {
+                case 'select':
+                    gameData.selectedElement = trainId;
+                    showTrainPanel(trainId);
+                    renderTrains();
+                    break;
+                    
+                case 'remove':
+                    // 从停车场移除引用
+                    if (train.depotId) {
+                        const depot = gameData.depots.find(d => d.id === train.depotId);
+                        if (depot && depot.trains) {
+                            const index = depot.trains.indexOf(trainId);
+                            if (index !== -1) {
+                                depot.trains.splice(index, 1);
+                            }
+                        }
+                    }
+                    
+                    // 删除列车
+                    const index = gameData.trains.findIndex(t => t.id === trainId);
+                    if (index !== -1) {
+                        gameData.trains.splice(index, 1);
+                        showNotification(`已删除列车: ${train.name}`);
+                    }
+                    
+                    // 更新计数和显示
+                    updateTrainCount();
+                    renderTrains();
+                    renderDepots();
+                    showInfoPanel();
+                    break;
+            }
+        }
+
+        // 开始列车调度流程
+        function startTrainDispatch(trainId) {
+            const train = gameData.trains.find(t => t.id === trainId);
+            if (!train) return;
+            
+            // 确定可到达的站点
+            let availableStations = [];
+            
+            if (train.depotId) {
+                availableStations = findReachableStations(train.depotId, train.allowedTracks);
+            } else if (train.currentStation) {
+                availableStations = findReachableStations(train.currentStation, train.allowedTracks);
+            }
+            
+            if (availableStations.length === 0) {
+                showNotification('没有可到达的站点', 'error');
+                return;
+            }
+            
+            // 高亮显示可到达的站点
+            availableStations.forEach(stationId => {
+                const stationEl = document.getElementById(stationId);
+                if (stationEl) {
+                    stationEl.classList.add('train-ready');
+                    
+                    // 添加点击事件以选择终点站
+                    const clickHandler = function() {
+                        dispatchTrain(trainId, stationId);
+                        gameData.trainDispatch.inProgress = false;
+                        gameData.trainDispatch.selectedTrain = null;
+                        hideDispatchHint();
+                        
+                        // 移除高亮和事件监听
+                        availableStations.forEach(sId => {
+                            const el = document.getElementById(sId);
+                            if (el) {
+                                el.classList.remove('train-ready');
+                                el.removeEventListener('click', clickHandler);
+                            }
+                        });
+                    };
+                    
+                    stationEl.addEventListener('click', clickHandler);
                 }
             });
-        });
-        
-        // 点击其他区域关闭快捷操作菜单
-        document.addEventListener('click', (e) => {
-            if (!quickActions.contains(e.target) && !e.target.closest('.province-sphere')) {
-                quickActions.classList.add('hidden');
+            
+            // 显示调度提示
+            const trainEl = document.getElementById(trainId);
+            if (trainEl) {
+                showDispatchHint(trainEl.getBoundingClientRect());
             }
-        });
-        
-        // 菜单控制
-        document.getElementById('btn-menu').addEventListener('click', () => {
-            gameMenu.classList.remove('hidden');
-            // 暂停游戏
-            if (gameState.running) {
-                clearInterval(gameInterval);
-                gameState.running = false;
-                document.getElementById('btn-speed').innerHTML = '<i class="fa fa-play"></i>';
+            
+            // 设置调度状态
+            gameData.trainDispatch.inProgress = true;
+            gameData.trainDispatch.selectedTrain = trainId;
+            
+            showNotification(`请选择${train.name}的终点站`);
+        }
+
+        // 查找所有可达站点
+        function findReachableStations(startId, allowedTracks) {
+            const visited = new Set();
+            const queue = [startId];
+            
+            while (queue.length > 0) {
+                const current = queue.shift();
+                if (visited.has(current)) continue;
+                
+                visited.add(current);
+                
+                // 找到当前元素
+                const currentElement = gameData.stations.find(s => s.id === current) || 
+                                      gameData.depots.find(d => d.id === current);
+                                      
+                if (!currentElement || !currentElement.connections) continue;
+                
+                // 检查所有连接
+                for (const neighborId of currentElement.connections) {
+                    // 检查连接的轨道是否允许列车通行
+                    const track = gameData.tracks.find(t => 
+                        (t.start === current && t.end === neighborId) || 
+                        (t.start === neighborId && t.end === current)
+                    );
+                    
+                    if (track && allowedTracks.includes(track.type) && !visited.has(neighborId)) {
+                        queue.push(neighborId);
+                    }
+                }
             }
-        });
-        
-        document.getElementById('btn-close-menu').addEventListener('click', () => {
-            gameMenu.classList.add('hidden');
-        });
-        
-        // 关闭提示
-        document.getElementById('close-tip').addEventListener('click', () => {
-            gameTip.classList.add('hidden');
-        });
-        
-        // 信息面板切换
-        document.getElementById('tab-events').addEventListener('click', () => {
-            showPanel('events');
-        });
-        
-        document.getElementById('tab-generals').addEventListener('click', () => {
-            showPanel('generals');
-        });
-        
-        document.getElementById('tab-tech').addEventListener('click', () => {
-            showPanel('tech');
-        });
-        
-        function showPanel(panelName) {
-            // 隐藏所有面板
-            document.getElementById('info-events').classList.add('hidden');
-            document.getElementById('info-generals').classList.add('hidden');
-            document.getElementById('info-tech').classList.add('hidden');
             
-            // 重置所有标签样式
-            document.getElementById('tab-events').classList.remove('border-yellow-500', 'text-yellow-500');
-            document.getElementById('tab-generals').classList.remove('border-yellow-500', 'text-yellow-500');
-            document.getElementById('tab-tech').classList.remove('border-yellow-500', 'text-yellow-500');
-            
-            document.getElementById('tab-events').classList.add('border-transparent', 'text-gray-400');
-            document.getElementById('tab-generals').classList.add('border-transparent', 'text-gray-400');
-            document.getElementById('tab-tech').classList.add('border-transparent', 'text-gray-400');
-            
-            // 显示选中的面板和标签
-            document.getElementById(`info-${panelName}`).classList.remove('hidden');
-            document.getElementById(`tab-${panelName}`).classList.remove('border-transparent', 'text-gray-400');
-            document.getElementById(`tab-${panelName}`).classList.add('border-yellow-500', 'text-yellow-500');
+            // 排除起点
+            visited.delete(startId);
+            return Array.from(visited);
         }
-        
-        // 快捷操作按钮
-        document.getElementById('btn-build').addEventListener('click', () => {
-            showActionFeedback('开始建设，工业将在3个月后提升');
-        });
-        
-        document.getElementById('btn-recruit').addEventListener('click', () => {
-            showActionFeedback('开始征兵，军队将在1个月后增加');
-        });
-        
-        document.getElementById('btn-research').addEventListener('click', () => {
-            showActionFeedback('开始研发科技，提升军队战斗力');
-        });
-        
-        document.getElementById('btn-attack').addEventListener('click', () => {
-            showActionFeedback('准备进攻，选择目标省份');
-        });
-        
-        // 显示操作反馈
-        function showActionFeedback(message) {
-            const feedback = document.createElement('div');
-            feedback.className = 'fixed bottom-4 left-4 bg-blue-800/90 text-white rounded p-3 shadow-lg z-50 max-w-xs';
-            feedback.textContent = message;
-            document.body.appendChild(feedback);
-            
-            setTimeout(() => {
-                feedback.classList.add('opacity-0', 'transition-opacity', 'duration-500');
-                setTimeout(() => feedback.remove(), 500);
-            }, 2000);
+
+        // 显示调度提示
+        function showDispatchHint(elementRect) {
+            const hint = document.getElementById('dispatch-hint');
+            hint.style.left = `${elementRect.right + 10}px`;
+            hint.style.top = `${elementRect.top}px`;
+            hint.classList.remove('hidden');
         }
+
+        // 隐藏调度提示
+        function hideDispatchHint() {
+            document.getElementById('dispatch-hint').classList.add('hidden');
+        }
+
+        // 显示操作提示
+        function showActionHint(x, y, text) {
+            const hint = document.getElementById('action-tooltip');
+            hint.textContent = text;
+            hint.style.left = `${x + 10}px`;
+            hint.style.top = `${y + 10}px`;
+            hint.classList.remove('hidden');
+        }
+
+        // 隐藏操作提示
+        function hideActionHint() {
+            document.getElementById('action-tooltip').classList.add('hidden');
+        }
+
+        // 重置工具按钮样式
+        function resetToolButtons() {
+            document.querySelectorAll('#tool-select, #tool-station, #tool-depot, #tool-track, #tool-highspeed, #tool-train, #tool-remove').forEach(btn => {
+                btn.classList.remove('bg-primary');
+                btn.classList.add('bg-gray-600', 'hover:bg-gray-500');
+            });
+        }
+
+        // 工具选择事件
+        function setupToolButtons() {
+            // 选择工具
+            document.getElementById('tool-select').addEventListener('click', () => {
+                gameData.selectedTool = 'select';
+                resetToolButtons();
+                document.getElementById('tool-select').classList.add('bg-primary');
+                document.getElementById('tool-select').classList.remove('bg-gray-600', 'hover:bg-gray-500');
+                hideActionHint();
+                clearTrackPreview();
+                gameData.trackBuilding.inProgress = false;
+                gameData.trackBuilding.startElement = null;
+            });
+            
+            // 车站工具
+            document.getElementById('tool-station').addEventListener('click', () => {
+                gameData.selectedTool = 'station';
+                resetToolButtons();
+                document.getElementById('tool-station').classList.add('bg-primary');
+                document.getElementById('tool-station').classList.remove('bg-gray-600', 'hover:bg-gray-500');
+                showNotification('点击地图任意位置建造车站');
+                hideActionHint();
+                clearTrackPreview();
+                gameData.trackBuilding.inProgress = false;
+                gameData.trackBuilding.startElement = null;
+            });
+            
+            // 停车场工具
+            document.getElementById('tool-depot').addEventListener('click', () => {
+                gameData.selectedTool = 'depot';
+                resetToolButtons();
+                document.getElementById('tool-depot').classList.add('bg-primary');
+                document.getElementById('tool-depot').classList.remove('bg-gray-600', 'hover:bg-gray-500');
+                showNotification('点击地图任意位置建造停车场');
+                hideActionHint();
+                clearTrackPreview();
+                gameData.trackBuilding.inProgress = false;
+                gameData.trackBuilding.startElement = null;
+            });
+            
+            // 普通铁轨工具
+            document.getElementById('tool-track').addEventListener('click', () => {
+                gameData.selectedTool = 'track';
+                resetToolButtons();
+                document.getElementById('tool-track').classList.add('bg-primary');
+                document.getElementById('tool-track').classList.remove('bg-gray-600', 'hover:bg-gray-500');
+                showNotification('先点击一个站点，再点击另一个站点建造普通铁轨');
+                hideActionHint();
+                gameData.trackBuilding.inProgress = false;
+                gameData.trackBuilding.startElement = null;
+            });
+            
+            // 高铁铁轨工具
+            document.getElementById('tool-highspeed').addEventListener('click', () => {
+                gameData.selectedTool = 'highspeed';
+                resetToolButtons();
+                document.getElementById('tool-highspeed').classList.add('bg-primary');
+                document.getElementById('tool-highspeed').classList.remove('bg-gray-600', 'hover:bg-gray-500');
+                showNotification('先点击一个高铁车站，再点击另一个高铁车站建造高铁铁轨');
+                hideActionHint();
+                gameData.trackBuilding.inProgress = false;
+                gameData.trackBuilding.startElement = null;
+            });
+            
+            // 列车工具
+            document.getElementById('tool-train').addEventListener('click', () => {
+                gameData.selectedTool = 'train';
+                resetToolButtons();
+                document.getElementById('tool-train').classList.add('bg-primary');
+                document.getElementById('tool-train').classList.remove('bg-gray-600', 'hover:bg-gray-500');
+                showNotification('点击停车场添加列车');
+                hideActionHint();
+                clearTrackPreview();
+                gameData.trackBuilding.inProgress = false;
+                gameData.trackBuilding.startElement = null;
+            });
+            
+            // 拆除工具
+            document.getElementById('tool-remove').addEventListener('click', () => {
+                gameData.selectedTool = 'remove';
+                resetToolButtons();
+                document.getElementById('tool-remove').classList.add('bg-primary');
+                document.getElementById('tool-remove').classList.remove('bg-gray-600', 'hover:bg-gray-500');
+                showNotification('点击要拆除的设施');
+                hideActionHint();
+                clearTrackPreview();
+                gameData.trackBuilding.inProgress = false;
+                gameData.trackBuilding.startElement = null;
+            });
+            
+            // 列车类型选择
+            document.querySelectorAll('.add-train-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const type = btn.getAttribute('data-train-type');
+                    gameData.selectedTool = `add-train-${type}`;
+                    
+                    // 更新按钮样式
+                    document.querySelectorAll('.add-train-btn').forEach(b => {
+                        b.classList.remove('bg-primary');
+                        b.classList.add('bg-gray-600', 'hover:bg-gray-500');
+                    });
+                    btn.classList.add('bg-primary');
+                    btn.classList.remove('bg-gray-600', 'hover:bg-gray-500');
+                    
+                    let typeName = '';
+                    switch(type) {
+                        case 'passenger': typeName = '客运列车'; break;
+                        case 'express': typeName = '高铁列车'; break;
+                        case 'inspection': typeName = '动检列车'; break;
+case 'track': typeName = '轨检列车'; break;
+                    }
+                    
+                    showNotification(`点击停车场添加${typeName}`);
+                });
+            });
+            
+            // 事件按钮
+            document.getElementById('events-button').addEventListener('click', () => {
+                const unhandledEvents = gameData.events.filter(e => !e.handled);
+                if (unhandledEvents.length > 0) {
+                    showEventPanel(unhandledEvents[0].id);
+                } else {
+                    showNotification('没有未处理的事件', 'info');
+                }
+            });
+            
+            // 关闭事件弹窗
+            document.getElementById('close-event-modal').addEventListener('click', () => {
+                document.getElementById('event-modal').classList.add('hidden');
+            });
+            
+            // 保存/加载按钮
+            document.getElementById('save-button').addEventListener('click', () => {
+                document.getElementById('save-load-title').textContent = '保存游戏';
+                document.getElementById('save-load-message').textContent = '确定要保存当前游戏进度吗？';
+                document.getElementById('save-load-modal').classList.remove('hidden');
+                
+                // 设置确认按钮事件
+                document.getElementById('save-load-confirm').onclick = () => {
+                    if (saveGame()) {
+                        showNotification('游戏已保存');
+                    } else {
+                        showNotification('保存失败', 'error');
+                    }
+                    document.getElementById('save-load-modal').classList.add('hidden');
+                };
+            });
+            
+            document.getElementById('load-button').addEventListener('click', () => {
+                document.getElementById('save-load-title').textContent = '加载游戏';
+                document.getElementById('save-load-message').textContent = '确定要加载上次保存的游戏进度吗？当前进度将被覆盖。';
+                document.getElementById('save-load-modal').classList.remove('hidden');
+                
+                // 设置确认按钮事件
+                document.getElementById('save-load-confirm').onclick = () => {
+                    const savedGame = localStorage.getItem('railwaySimulatorSave');
+                    if (savedGame) {
+                        try {
+                            if (loadGame(JSON.parse(savedGame))) {
+                                showNotification('游戏已加载');
+                            } else {
+                                showNotification('加载失败', 'error');
+                            }
+                        } catch (e) {
+                            showNotification('加载失败', 'error');
+                            console.error('加载失败:', e);
+                        }
+                    } else {
+                        showNotification('没有找到保存的游戏', 'error');
+                    }
+                    document.getElementById('save-load-modal').classList.add('hidden');
+                };
+            });
+            
+            // 取消保存/加载
+            document.getElementById('save-load-cancel').addEventListener('click', () => {
+                document.getElementById('save-load-modal').classList.add('hidden');
+            });
+        }
+
+        // 设置地图交互
+        function setupMapInteraction() {
+            const mapContainer = document.getElementById('map-container');
+            const mapTransform = gameData.mapTransform;
+            
+            // 鼠标按下事件
+            mapContainer.addEventListener('mousedown', (e) => {
+                if (e.button === 0) { // 左键
+                    mapTransform.isDragging = true;
+                    mapTransform.startX = e.clientX - mapTransform.x;
+                    mapTransform.startY = e.clientY - mapTransform.y;
+                    mapContainer.style.cursor = 'grabbing';
+                }
+            });
+            
+            // 鼠标移动事件
+            document.addEventListener('mousemove', (e) => {
+                // 处理拖动
+                if (mapTransform.isDragging) {
+                    mapTransform.x = e.clientX - mapTransform.startX;
+                    mapTransform.y = e.clientY - mapTransform.startY;
+                    updateMapTransform();
+                    hideActionHint();
+                    return;
+                }
+                
+                // 处理轨道预览
+                if (gameData.trackBuilding.inProgress && gameData.trackBuilding.startElement) {
+                    const startElement = gameData.stations.find(s => s.id === gameData.trackBuilding.startElement) || 
+                                      gameData.depots.find(d => d.id === gameData.trackBuilding.startElement);
+                    
+                    if (startElement) {
+                        // 将鼠标位置转换为地图坐标
+                        const rect = mapContainer.getBoundingClientRect();
+                        const mapX = (e.clientX - rect.left) / mapTransform.scale - mapTransform.x;
+                        const mapY = (e.clientY - rect.top) / mapTransform.scale - mapTransform.y;
+                        
+                        showTrackPreview(startElement.x, startElement.y, mapX, mapY, gameData.trackBuilding.trackType);
+                    }
+                    return;
+                }
+                
+                // 显示操作提示
+                if (gameData.selectedTool === 'station') {
+                    showActionHint(e.clientX, e.clientY, '点击建造车站');
+                } else if (gameData.selectedTool === 'depot') {
+                    showActionHint(e.clientX, e.clientY, '点击建造停车场');
+                } else if ((gameData.selectedTool === 'track' || gameData.selectedTool === 'highspeed') && !gameData.trackBuilding.inProgress) {
+                    showActionHint(e.clientX, e.clientY, '先点击一个站点作为起点');
+                } else if (gameData.trainDispatch.inProgress) {
+                    showActionHint(e.clientX, e.clientY, '点击终点站发车');
+                } else {
+                    hideActionHint();
+                }
+            });
+            
+            // 鼠标释放事件
+            document.addEventListener('mouseup', (e) => {
+                if (e.button === 0 && mapTransform.isDragging) { // 左键
+                    mapTransform.isDragging = false;
+                    mapContainer.style.cursor = 'default';
+                }
+            });
+            
+            // 鼠标离开窗口事件
+            document.addEventListener('mouseleave', () => {
+                if (mapTransform.isDragging) {
+                    mapTransform.isDragging = false;
+                    mapContainer.style.cursor = 'default';
+                }
+            });
+            
+            // 地图点击事件
+            mapContainer.addEventListener('click', (e) => {
+                // 如果正在拖动，不处理点击
+                if (mapTransform.isDragging) return;
+                
+                // 将鼠标位置转换为地图坐标
+                const rect = mapContainer.getBoundingClientRect();
+                const mapX = (e.clientX - rect.left) / mapTransform.scale - mapTransform.x;
+                const mapY = (e.clientY - rect.top) / mapTransform.scale - mapTransform.y;
+                
+                switch(gameData.selectedTool) {
+                    case 'station':
+                        addStation(mapX, mapY);
+                        break;
+                        
+                    case 'depot':
+                        addDepot(mapX, mapY);
+                        break;
+                        
+                    case 'add-train-passenger':
+                        // 查找最近的停车场
+                        const nearestDepot = findNearestDepot(mapX, mapY);
+                        if (nearestDepot) {
+                            addTrain('passenger', nearestDepot.x, nearestDepot.y, nearestDepot.id);
+                            gameData.selectedTool = 'select';
+                            resetToolButtons();
+                            document.getElementById('tool-select').classList.add('bg-primary');
+                            document.getElementById('tool-select').classList.remove('bg-gray-600', 'hover:bg-gray-500');
+                        } else {
+                            showNotification('请先建造停车场', 'error');
+                        }
+                        break;
+                        
+                    case 'add-train-express':
+                        const nearestDepot2 = findNearestDepot(mapX, mapY);
+                        if (nearestDepot2) {
+                            addTrain('express', nearestDepot2.x, nearestDepot2.y, nearestDepot2.id);
+                            gameData.selectedTool = 'select';
+                            resetToolButtons();
+                            document.getElementById('tool-select').classList.add('bg-primary');
+                            document.getElementById('tool-select').classList.remove('bg-gray-600', 'hover:bg-gray-500');
+                        } else {
+                            showNotification('请先建造停车场', 'error');
+                        }
+                        break;
+                        
+                    case 'add-train-inspection':
+                        const nearestDepot3 = findNearestDepot(mapX, mapY);
+                        if (nearestDepot3) {
+                            addTrain('inspection', nearestDepot3.x, nearestDepot3.y, nearestDepot3.id);
+                            gameData.selectedTool = 'select';
+                            resetToolButtons();
+                            document.getElementById('tool-select').classList.add('bg-primary');
+                            document.getElementById('tool-select').classList.remove('bg-gray-600', 'hover:bg-gray-500');
+                        } else {
+                            showNotification('请先建造停车场', 'error');
+                        }
+                        break;
+                        
+                    case 'add-train-track':
+                        const nearestDepot4 = findNearestDepot(mapX, mapY);
+                        if (nearestDepot4) {
+                            addTrain('track', nearestDepot4.x, nearestDepot4.y, nearestDepot4.id);
+                            gameData.selectedTool = 'select';
+                            resetToolButtons();
+                            document.getElementById('tool-select').classList.add('bg-primary');
+                            document.getElementById('tool-select').classList.remove('bg-gray-600', 'hover:bg-gray-500');
+                        } else {
+                            showNotification('请先建造停车场', 'error');
+                        }
+                        break;
+                        
+                    case 'select':
+                        // 取消选择
+                        if (gameData.selectedElement) {
+                            gameData.selectedElement = null;
+                            renderStations();
+                            renderDepots();
+                            renderTrains();
+                            showInfoPanel();
+                        }
+                        break;
+                }
+            });
+            
+            // 缩放控制
+            document.getElementById('zoom-in').addEventListener('click', () => {
+                mapTransform.scale = Math.min(3, mapTransform.scale * 1.2);
+                updateMapTransform();
+                renderCities(); // 根据新缩放级别重新渲染城市标签
+            });
+            
+            document.getElementById('zoom-out').addEventListener('click', () => {
+                mapTransform.scale = Math.max(0.3, mapTransform.scale / 1.2);
+                updateMapTransform();
+                renderCities(); // 根据新缩放级别重新渲染城市标签
+            });
+            
+            // 鼠标滚轮缩放
+            mapContainer.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    // 放大
+                    mapTransform.scale = Math.min(3, mapTransform.scale * 1.1);
+                } else {
+                    // 缩小
+                    mapTransform.scale = Math.max(0.3, mapTransform.scale / 1.1);
+                }
+                updateMapTransform();
+                renderCities(); // 根据新缩放级别重新渲染城市标签
+            });
+            
+            // 重置地图视图
+            document.getElementById('reset-map').addEventListener('click', () => {
+                mapTransform.scale = mapTransform.initialScale;
+                mapTransform.x = mapTransform.initialX;
+                mapTransform.y = mapTransform.initialY;
+                updateMapTransform();
+                renderCities(); // 根据新缩放级别重新渲染城市标签
+            });
+        }
+
+        // 查找最近的停车场
+        function findNearestDepot(x, y) {
+            let nearestDepot = null;
+            let minDistance = 100; // 限制查找范围
+            
+            gameData.depots.forEach(depot => {
+                const distance = Math.hypot(depot.x - x, depot.y - y);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestDepot = depot;
+                }
+            });
+            
+            return nearestDepot;
+        }
+
+        // 更新地图变换
+        function updateMapTransform() {
+            const mapContainer = document.getElementById('map-container');
+            mapContainer.style.transform = `translate(${gameData.mapTransform.x}px, ${gameData.mapTransform.y}px) scale(${gameData.mapTransform.scale})`;
+        }
+
+        // 更新游戏UI
+        function updateGameUI() {
+            updateFundsDisplay();
+            updateDateDisplay();
+            updateStationCount();
+            updateDepotCount();
+            updateTrainCount();
+            updateTrackCount();
+            updateEventCount();
+        }
+
+        // 初始化游戏
+        window.addEventListener('load', initGame);
     </script>
 </body>
-</html>
+</html>```
